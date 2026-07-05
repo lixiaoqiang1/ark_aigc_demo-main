@@ -1,4 +1,128 @@
 {
+  "_配置说明": {
+    "使用方法": "复制本文件为 Custom.json，将占位符替换为真实值，可删除本 _配置说明 字段",
+    "快捷获取全部参数": "https://console.volcengine.com/rtc/aigc/run → 跑通后点右上角「接入 API」复制 JSON",
+    "三种ID对照": {
+      "RTC_AppId": "24位hex → RTCConfig.AppId / VoiceChat.AppId → https://console.volcengine.com/rtc/aigc/listRTC",
+      "语音AppId": "纯数字 → ASRConfig / TTSConfig → https://console.volcengine.com/speech/service/app",
+      "EndPointId": "ep-xxx → LLMConfig → https://console.volcengine.com/ark/region:ark+cn-beijing/endpoint"
+    },
+    "字段说明": {
+      "SceneConfig.icon": {
+        "说明": "前端场景卡片显示的头像图标 URL",
+        "获取": "可使用官方默认图，或上传自有图片获取 URL"
+      },
+      "SceneConfig.name": {
+        "说明": "前端场景名称，如「自定义助手」",
+        "获取": "自定义文字"
+      },
+      "AccountConfig.accessKeyId": {
+        "说明": "火山 Access Key，用于服务端签名调用 OpenAPI（StartVoiceChat 等）",
+        "获取": "https://console.volcengine.com/iam/keymanage/"
+      },
+      "AccountConfig.secretKey": {
+        "说明": "与 accessKeyId 配对的 Secret Key，仅保存在服务端",
+        "获取": "https://console.volcengine.com/iam/keymanage/"
+      },
+      "RTCConfig.AppId": {
+        "说明": "RTC 实时音视频应用 ID，用户浏览器进房凭证",
+        "格式": "24位十六进制",
+        "获取": "https://console.volcengine.com/rtc/aigc/listRTC"
+      },
+      "RTCConfig.AppKey": {
+        "说明": "RTC 应用密钥，服务端生成 Token 用，不会返回给前端",
+        "格式": "32位十六进制，须与 AppId 配对",
+        "获取": "https://console.volcengine.com/rtc/aigc/listRTC"
+      },
+      "RTCConfig.RoomId": {
+        "说明": "RTC 房间 ID，留空则服务端每次 getScenes 自动生成 UUID",
+        "获取": "可留空"
+      },
+      "RTCConfig.UserId": {
+        "说明": "真人用户（浏览器端）的 RTC 用户 ID，留空自动生成，勿与 Agent UserId 相同",
+        "获取": "建议留空"
+      },
+      "RTCConfig.Token": {
+        "说明": "RTC 进房 Token，留空则服务端用 AppKey 自动签名生成（24h 有效）",
+        "获取": "建议留空"
+      },
+      "VoiceChat.AppId": {
+        "说明": "启动 AIGC 智能体时使用的 RTC 应用 ID，须与 RTCConfig.AppId 一致",
+        "获取": "https://console.volcengine.com/rtc/aigc/listRTC"
+      },
+      "VoiceChat.RoomId": {
+        "说明": "智能体加入的 RTC 房间，留空则与 RTCConfig.RoomId 同步",
+        "获取": "建议留空"
+      },
+      "VoiceChat.TaskId": {
+        "说明": "AIGC 任务唯一 ID，固定值重复启动会报错，留空或删除由服务端每次自动生成",
+        "获取": "建议留空"
+      },
+      "VoiceChat.AgentConfig.TargetUserId": {
+        "说明": "Agent 对话的目标用户 ID 列表，第一项为真人用户 ID，留空则等于 RTCConfig.UserId",
+        "获取": "建议留空"
+      },
+      "VoiceChat.AgentConfig.WelcomeMessage": {
+        "说明": "AI 进房后的欢迎语",
+        "获取": "自定义文字"
+      },
+      "VoiceChat.AgentConfig.UserId": {
+        "说明": "AI 机器人在 RTC 房间中的用户 ID，不能与 TargetUserId 相同",
+        "获取": "固定填 ChatBot01 即可"
+      },
+      "VoiceChat.AgentConfig.EnableConversationStateCallback": {
+        "说明": "是否开启对话状态回调（思考中/说话中等），前端 UI 依赖此开关",
+        "获取": "true"
+      },
+      "VoiceChat.Config.ASRConfig.ProviderParams.AppId": {
+        "说明": "语音识别 AppId，把用户语音转成文字",
+        "格式": "纯数字，不是 RTC AppId",
+        "获取": "https://console.volcengine.com/speech/service/app（勾选流式语音识别）"
+      },
+      "VoiceChat.Config.ASRConfig.ProviderParams.Cluster": {
+        "说明": "ASR 集群名称，小模型流式识别固定值",
+        "获取": "默认 volcengine_streaming_common"
+      },
+      "VoiceChat.Config.TTSConfig.ProviderParams.app.appid": {
+        "说明": "语音合成 AppId，把 AI 文字回复转成语音，须与 ASR AppId 相同",
+        "格式": "纯数字，字段名是小写 appid",
+        "获取": "https://console.volcengine.com/speech/service/app（勾选语音合成）"
+      },
+      "VoiceChat.Config.TTSConfig.ProviderParams.app.cluster": {
+        "说明": "TTS 集群名称",
+        "获取": "默认 volcano_tts"
+      },
+      "VoiceChat.Config.TTSConfig.ProviderParams.audio.voice_type": {
+        "说明": "AI 音色 ID",
+        "获取": "https://console.volcengine.com/speech/service/tts（音色列表，如 BV001_streaming）"
+      },
+      "VoiceChat.Config.LLMConfig.Mode": {
+        "说明": "大模型接入模式，ArkV3 表示使用火山方舟",
+        "获取": "固定 ArkV3"
+      },
+      "VoiceChat.Config.LLMConfig.EndPointId": {
+        "说明": "方舟模型接入点，决定使用哪个大模型（豆包等）",
+        "格式": "ep- 开头",
+        "获取": "https://console.volcengine.com/ark/region:ark+cn-beijing/endpoint"
+      },
+      "VoiceChat.Config.LLMConfig.SystemMessages": {
+        "说明": "系统提示词，定义 AI 人设、性格、回答风格",
+        "获取": "自定义文字"
+      },
+      "VoiceChat.Config.LLMConfig.VisionConfig.Enable": {
+        "说明": "是否开启视觉/多模态（摄像头画面送给 AI）",
+        "获取": "默认 false，需开通视觉能力后改 true"
+      },
+      "VoiceChat.Config.AvatarConfig.Enabled": {
+        "说明": "是否启用数字人形象",
+        "获取": "默认 false，需开通数字人服务"
+      },
+      "VoiceChat.Config.InterruptMode": {
+        "说明": "打断模式，0=支持用户打断 AI 说话",
+        "获取": "0 或 1，见官方文档"
+      }
+    }
+  },
   "SceneConfig": {
     "icon": "https://lf3-rtc-demo.volccdn.com/obj/rtc-aigc-assets/DoubaoAvatar.png",
     "name": "自定义助手"
@@ -17,12 +141,12 @@
   "VoiceChat": {
     "AppId": "你的RTC_AppId_24位hex",
     "RoomId": "",
-    "TaskId": "ChatTask01",
+    "TaskId": "",
     "AgentConfig": {
       "TargetUserId": [
         ""
       ],
-      "WelcomeMessage": "你好，我是 AI 助理，有什么需要帮忙的吗？",
+      "WelcomeMessage": "你好，我是AI助理，有什么需要帮忙的吗？",
       "UserId": "ChatBot01",
       "EnableConversationStateCallback": true
     },
