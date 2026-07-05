@@ -1,0 +1,75 @@
+{
+  "SceneConfig": {
+    "icon": "https://lf3-rtc-demo.volccdn.com/obj/rtc-aigc-assets/DoubaoAvatar.png",
+    "name": "自定义助手"
+  },
+  "AccountConfig": {
+    "accessKeyId": "你的AK",
+    "secretKey": "你的SK"
+  },
+  "RTCConfig": {
+    "AppId": "你的RTC_AppId_24位hex",
+    "AppKey": "你的RTC_AppKey_32位hex",
+    "RoomId": "",
+    "UserId": "",
+    "Token": ""
+  },
+  "VoiceChat": {
+    "AppId": "你的RTC_AppId_24位hex",
+    "RoomId": "",
+    "TaskId": "ChatTask01",
+    "AgentConfig": {
+      "TargetUserId": [
+        ""
+      ],
+      "WelcomeMessage": "你好，我是 AI 助理，有什么需要帮忙的吗？",
+      "UserId": "ChatBot01",
+      "EnableConversationStateCallback": true
+    },
+    "Config": {
+      "ASRConfig": {
+        "Provider": "volcano",
+        "ProviderParams": {
+          "Mode": "smallmodel",
+          "AppId": "你的语音AppId_纯数字",
+          "Cluster": "volcengine_streaming_common"
+        }
+      },
+      "TTSConfig": {
+        "Provider": "volcano",
+        "ProviderParams": {
+          "app": {
+            "appid": "你的语音AppId_纯数字",
+            "cluster": "volcano_tts"
+          },
+          "audio": {
+            "voice_type": "BV001_streaming",
+            "speed_ratio": 1,
+            "pitch_ratio": 1,
+            "volume_ratio": 1
+          }
+        }
+      },
+      "LLMConfig": {
+        "Mode": "ArkV3",
+        "EndPointId": "你的方舟EndPointId_ep-xxx",
+        "SystemMessages": [
+          "你是小宁，性格幽默又善解人意。你在表达时需简明扼要，有自己的观点。"
+        ],
+        "VisionConfig": {
+          "Enable": false
+        }
+      },
+      "AvatarConfig": {
+        "Enabled": false,
+        "AvatarType": "3min",
+        "AvatarRole": "250623-zhibo-linyunzhi",
+        "BackgroundUrl": "",
+        "VideoBitrate": 2000,
+        "AvatarAppID": "",
+        "AvatarToken": ""
+      },
+      "InterruptMode": 0
+    }
+  }
+}
