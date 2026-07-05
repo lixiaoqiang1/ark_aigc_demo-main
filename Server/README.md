@@ -1,34 +1,48 @@
-# Node Server
+# Python Server
 
 ## 启动命令
-```
-yarn
 
-yarn dev
+```bash
+cd Server
+pip install -r requirements.txt
+python main.py
 ```
+
+服务监听 **http://0.0.0.0:3001**，API 与原先 Node 版完全一致：
+
+| 接口 | 说明 |
+|------|------|
+| `POST /getScenes?Action=getScenes` | 读取场景配置，自动生成 RTC Token |
+| `POST /proxy?Action=StartVoiceChat` | 启动 AIGC 智能体 |
+| `POST /proxy?Action=StopVoiceChat` | 停止 AIGC 智能体 |
 
 ## 使用须知
-Node 服务启动时会自动读取 `Server/scenes` 下的所有文件作为可用的场景, 并通过接口 API 返回相关信息。
 
-因此，您需要：
-1. 在 `Server/scenes` 目录下参考其它 JSON 的格式, 自定义创建一个 `xxxx.json` 文件，用于描述您的场景，其中 xxxx 为场景名称。
-2. 确保您的 `.json` 文件符合模版定义(可参考 Custom.json), 大小写敏感。
-3. 新增场景 JSON 后须重启 Node 服务，保证场景信息被正常读取。
-4. JSON 文件中, 若 `RTCConfig.RoomId`、`RTCConfig.UserId`、`RTCConfig.Token` 其中之一未填写, Node 服务将自动生成对应的值以保证对话可以正常启动。
+服务启动时会自动读取 `Server/scenes` 下的所有 `.json` 文件作为可用场景。
 
+1. 在 `Server/scenes` 目录下参考 `Custom.json.example` 创建 `Custom.json`（含真实凭证，该文件已在 `.gitignore` 中）。
+2. JSON 格式大小写敏感，字段说明见 `doc/01-配置说明.md`。
+3. 修改场景 JSON 后重启服务；`getScenes` 每次会重新生成 TaskId。
+4. 若 `RTCConfig.RoomId`、`UserId`、`Token` 未填写，服务端会自动生成。
+
+## 目录结构
+
+```
+Server/
+├── main.py           # FastAPI 入口（/getScenes、/proxy）
+├── util.py           # 配置读取、校验、OpenAPI 签名
+├── token_builder.py  # RTC AccessToken 生成
+├── requirements.txt
+└── scenes/           # 场景配置（Custom.json）
+```
 
 ## 相关参数获取
-- AccountConfig
-    - 可在 https://console.volcengine.com/iam/keymanage/ 获取 AK/SK。
-- RTCConfig
-    - AppId、AppKey 可从 https://console.volcengine.com/rtc/aigc/listRTC 中获取。
-    - RoomId、UserId 可自定义也可不填，交由服务端生成。
-- VoiceChat
-    - 可参考 https://www.volcengine.com/docs/6348/1558163 中参数描述
-    - 可通过 [快速跑通 Demo](https://console.volcengine.com/rtc/aigc/run?s=g) 快速获取参数, 跑通后点击右上角 `接入 API` 按钮复制相关代码贴到 JSON 配置文件中即可。
 
+- **AccountConfig**：https://console.volcengine.com/iam/keymanage/
+- **RTCConfig**：https://console.volcengine.com/rtc/aigc/listRTC
+- **VoiceChat**：https://www.volcengine.com/docs/6348/1558163
 
 ## 注意
-- 相关错误会通过服务端接口返回。
-- Node 服务会根据您配置的 `VoiceChat` 中是否存在视觉模型相关的配置返回相关信息给前端页面, 从而控制相关 UI 是否展示。
-- 使用时请留意相关服务已开通。
+
+- 原 Node 版文件（`app.js`、`util.js`、`token.js`）保留作参考，默认请使用 Python 版。
+- 同一时间 3001 端口只能跑一个服务端（Python 或 Node，不要同时启动）。

@@ -18,8 +18,8 @@ for %%P in (3000 3001) do (
     )
 )
 
-echo [1/2] 启动 Node 服务端 (3001) ...
-start "AIGC-Server-3001" cmd /k "cd /d %ROOT%\Server && npm run dev"
+echo [1/2] 启动 Python 服务端 (3001) ...
+start "AIGC-Server-3001" cmd /k "cd /d %ROOT%\Server && python main.py"
 
 timeout /t 3 /nobreak >nul
 

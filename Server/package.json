@@ -18,7 +18,7 @@
     "nodemon": "^3.1.10"
   },
   "scripts": {
-    "dev": "nodemon app.js",
-    "start": "nodemon app.js"
+    "dev": "python main.py",
+    "start": "python main.py"
   }
 }

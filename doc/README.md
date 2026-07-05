@@ -1,6 +1,6 @@
 # ark_aigc_demo 项目文档
 
-> 火山引擎 **RTC 实时语音 AIGC Demo** 的中文说明文档。本地 Node 服务端负责配置与签名，ASR / LLM / TTS 在火山云端完成。
+> 火山引擎 **RTC 实时语音 AIGC Demo** 的中文说明文档。本地 **Python** 服务端负责配置与签名，ASR / LLM / TTS 在火山云端完成。
 
 ---
 
@@ -9,7 +9,7 @@
 | 项 | 值 |
 |----|-----|
 | Web 前端 | http://localhost:3000 |
-| Node 服务端 | http://localhost:3001 |
+| Python 服务端 | http://localhost:3001 |
 | **核心配置文件** | `Server/scenes/Custom.json` |
 | 前端代理地址 | `src/config/index.ts` |
 | BAT 启停脚本 | `scripts/stop-services.bat` / `start-services.bat` / `restart-services.bat` |
@@ -48,7 +48,10 @@
 
 ```
 ark_aigc_demo-main/
-├── Server/                 Node 服务端（默认，端口 3001）
+├── Server/                 Python 服务端（FastAPI，端口 3001）
+│   ├── main.py             API 入口
+│   ├── util.py             配置读取、OpenAPI 签名
+│   ├── token_builder.py    RTC Token 生成
 │   └── scenes/Custom.json  ⭐ 核心配置
 ├── src/                    React 前端（端口 3000）
 ├── scripts/                Windows BAT 启停脚本
@@ -56,10 +59,10 @@ ark_aigc_demo-main/
 └── rag_llm_server/         可选 RAG 服务端（与默认 Demo 无关）
 ```
 
-> 根目录 [项目结构与运行指南.md](../项目结构与运行指南.md) 含三套 Python 服务端对比，进阶阅读可参考。
+> 根目录 [项目结构与运行指南.md](../项目结构与运行指南.md) 含进阶服务端对比，可选阅读。
 
 ---
 
 ## 文档背景
 
-本系列文档面向 AI / 服务端初学者，梳理：如何跑通项目、配置文件在哪、服务端如何代理大模型、前后端对话如何衔接。前端部分默认读者已了解 React。
+本系列文档面向 AI / 服务端初学者，梳理：如何跑通项目、配置文件在哪、服务端如何代理大模型、前后端对话如何衔接。前端部分默认读者已了解 React；服务端默认使用 **Python + FastAPI**。
