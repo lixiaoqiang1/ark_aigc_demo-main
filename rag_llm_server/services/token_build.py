@@ -27,7 +27,7 @@ class ByteBuf:
     def put_tree_map_uint32(self, m):
         if not m: self.put_uint16(0); return self
         self.put_uint16(len(m))
-        for k, v in m.items(): self.put_uint16(int(k)); self.put_uint32(int(v))
+        for k, v in sorted(m.items(), key=lambda item: int(item[0])): self.put_uint16(int(k)); self.put_uint32(int(v))
         return self
 
 class AccessToken:

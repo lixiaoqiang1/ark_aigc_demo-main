@@ -51,7 +51,7 @@ class ByteBuf:
             return self
 
         self.put_uint16(len(m))
-        for k, v in m.items():
+        for k, v in sorted(m.items(), key=lambda item: int(item[0])):
             self.put_uint16(int(k))
             self.put_uint32(int(v))
         return self
