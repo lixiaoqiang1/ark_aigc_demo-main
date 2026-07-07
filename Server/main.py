@@ -197,10 +197,11 @@ async def get_scenes(_request: Request):
                     voice_chat['RoomId'] = rtc_config.get('RoomId') or str(uuid.uuid4())
                     rtc_config['RoomId'] = voice_chat['RoomId']
 
-                if not rtc_config.get('Token') and app_key:
-                    rtc_config['Token'] = _build_token(
-                        app_id, app_key, rtc_config['RoomId'], rtc_config['UserId']
-                    )
+            # 每次 getScenes 都按当前 RoomId/UserId 重新签发 Token，避免配置里残留旧 Token
+            if app_key and rtc_config.get('RoomId') and rtc_config.get('UserId'):
+                rtc_config['Token'] = _build_token(
+                    app_id, app_key, rtc_config['RoomId'], rtc_config['UserId']
+                )
 
             scene_config['id'] = key
             scene_config['botName'] = voice_chat.get('AgentConfig', {}).get('UserId')
