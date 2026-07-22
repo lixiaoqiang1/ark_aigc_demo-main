@@ -9,7 +9,7 @@ const bodyParser = require('koa-bodyparser');
 const cors = require('koa2-cors');
 const { Signer } = require('@volcengine/openapi');
 const fetch = require('node-fetch');
-const { wrapper, assert, readFiles, assertSpeechAppId } = require('./util');
+const { wrapper, assert, readFiles } = require('./util');
 const TokenManager = require('./token');
 const Privileges = require('./token').privileges;
 
@@ -49,47 +49,9 @@ app.use(async ctx => {
 
       let body = {};
       switch(Action) {
-        case 'StartVoiceChat': {
-          assertSpeechAppId(
-            VoiceChat?.Config?.ASRConfig?.ProviderParams?.AppId,
-            'ASRConfig.ProviderParams.AppId'
-          );
-          assertSpeechAppId(
-            VoiceChat?.Config?.TTSConfig?.ProviderParams?.app?.appid,
-            'TTSConfig.ProviderParams.app.appid'
-          );
-
-          body = JSON.parse(JSON.stringify(VoiceChat));
-          if (!body.TaskId) {
-            body.TaskId = uuid.v4();
-            VoiceChat.TaskId = body.TaskId;
-          }
-          if (!body.AgentConfig?.UserId) {
-            body.AgentConfig = body.AgentConfig || {};
-            body.AgentConfig.UserId = 'ChatBot01';
-            VoiceChat.AgentConfig.UserId = body.AgentConfig.UserId;
-          }
-
-          // 避免固定 TaskId 重复启动导致云端任务僵死
-          const stopBody = { AppId: body.AppId, RoomId: body.RoomId, TaskId: body.TaskId };
-          if (stopBody.AppId && stopBody.RoomId && stopBody.TaskId) {
-            const stopReq = {
-              region: 'cn-north-1',
-              method: 'POST',
-              params: { Action: 'StopVoiceChat', Version },
-              headers: { Host: 'rtc.volcengineapi.com', 'Content-type': 'application/json' },
-              body: stopBody,
-            };
-            const stopSigner = new Signer(stopReq, 'rtc');
-            stopSigner.addAuthorization(AccountConfig);
-            await fetch(`https://rtc.volcengineapi.com?Action=StopVoiceChat&Version=${Version}`, {
-              method: 'POST',
-              headers: stopReq.headers,
-              body: JSON.stringify(stopBody),
-            });
-          }
+        case 'StartVoiceChat':
+          body = VoiceChat;
           break;
-        }
         case 'StopVoiceChat':
           const { AppId, RoomId, TaskId } = VoiceChat;
           assert(AppId, 'VoiceChat.AppId 不能为空');
@@ -149,29 +111,6 @@ app.use(async ctx => {
           key.expireTime(Math.floor(new Date() / 1000) + (24 * 3600));
           RTCConfig.Token = key.serialize();
         }
-        VoiceChat.TaskId = uuid.v4();
-        if (!VoiceChat.AgentConfig?.UserId) {
-          VoiceChat.AgentConfig.UserId = 'ChatBot01';
-        }
-        const agentUserId = VoiceChat.AgentConfig.UserId;
-        const targetUserId = VoiceChat.AgentConfig.TargetUserId?.[0];
-        if (!targetUserId || targetUserId === agentUserId || RTCConfig.UserId === agentUserId) {
-          if (!RTCConfig.UserId || RTCConfig.UserId === agentUserId) {
-            RTCConfig.UserId = uuid.v4();
-          }
-          VoiceChat.AgentConfig.TargetUserId[0] = RTCConfig.UserId;
-          if (!VoiceChat.RoomId) {
-            VoiceChat.RoomId = RTCConfig.RoomId || uuid.v4();
-            RTCConfig.RoomId = VoiceChat.RoomId;
-          }
-          if (!RTCConfig.Token && RTCConfig.AppKey) {
-            const key = new TokenManager.AccessToken(AppId, AppKey, RTCConfig.RoomId, RTCConfig.UserId);
-            key.addPrivilege(Privileges.PrivSubscribeStream, 0);
-            key.addPrivilege(Privileges.PrivPublishStream, 0);
-            key.expireTime(Math.floor(new Date() / 1000) + (24 * 3600));
-            RTCConfig.Token = key.serialize();
-          }
-        }
         SceneConfig.id = scene;
         SceneConfig.botName = VoiceChat?.AgentConfig?.UserId;
         SceneConfig.isInterruptMode = VoiceChat?.Config?.InterruptMode === 0;
@@ -192,7 +131,7 @@ app.use(async ctx => {
   });
 });
 
-app.listen(3001, '0.0.0.0', () => {
-  console.log('AIGC Server is running at http://0.0.0.0:3001');
+app.listen(3001, () => {
+  console.log('AIGC Server is running at http://localhost:3001');
 });
 

@@ -1,4 +1,6 @@
-# Server/token_builder.py
+# Copyright 2025 Beijing Volcano Engine Technology Co., Ltd. All Rights Reserved.
+# SPDX-license-identifier: BSD-3-Clause
+
 import time
 import struct
 import hmac
@@ -7,18 +9,18 @@ import base64
 import random
 from io import BytesIO
 
-VERSION = "001"
+VERSION = '001'
 VERSION_LENGTH = 3
 APP_ID_LENGTH = 24
 
-# 权限定义
 PRIVILEGES = {
-    "PrivPublishStream": 0,
-    "privPublishAudioStream": 1,
-    "privPublishVideoStream": 2,
-    "privPublishDataStream": 3,
-    "PrivSubscribeStream": 4,
+    'PrivPublishStream': 0,
+    'privPublishAudioStream': 1,
+    'privPublishVideoStream': 2,
+    'privPublishDataStream': 3,
+    'PrivSubscribeStream': 4,
 }
+
 
 class ByteBuf:
     def __init__(self, data=None):
@@ -47,14 +49,17 @@ class ByteBuf:
         if not m:
             self.put_uint16(0)
             return self
-        
+
         self.put_uint16(len(m))
         for k, v in sorted(m.items(), key=lambda item: int(item[0])):
             self.put_uint16(int(k))
             self.put_uint32(int(v))
         return self
 
+
 class AccessToken:
+    """对应 Node token.js AccessToken"""
+
     def __init__(self, app_id, app_key, room_id, user_id):
         self.app_id = app_id
         self.app_key = app_key
@@ -67,11 +72,11 @@ class AccessToken:
 
     def add_privilege(self, privilege, expire_timestamp):
         self.privileges[privilege] = expire_timestamp
-        
-        if privilege == PRIVILEGES["PrivPublishStream"]:
-            self.privileges[PRIVILEGES["privPublishVideoStream"]] = expire_timestamp
-            self.privileges[PRIVILEGES["privPublishAudioStream"]] = expire_timestamp
-            self.privileges[PRIVILEGES["privPublishDataStream"]] = expire_timestamp
+
+        if privilege == PRIVILEGES['PrivPublishStream']:
+            self.privileges[PRIVILEGES['privPublishVideoStream']] = expire_timestamp
+            self.privileges[PRIVILEGES['privPublishAudioStream']] = expire_timestamp
+            self.privileges[PRIVILEGES['privPublishDataStream']] = expire_timestamp
 
     def expire_time(self, expire_timestamp):
         self.expire_at = expire_timestamp
@@ -88,12 +93,6 @@ class AccessToken:
 
     def serialize(self):
         msg = self.pack_msg()
-        # HMAC-SHA256 签名
-        signature = hmac.new(
-            self.app_key.encode('utf-8'), 
-            msg, 
-            hashlib.sha256
-        ).digest()
-        
+        signature = hmac.new(self.app_key.encode('utf-8'), msg, hashlib.sha256).digest()
         content = ByteBuf().put_bytes(msg).put_bytes(signature).pack()
         return VERSION + self.app_id + base64.b64encode(content).decode('utf-8')

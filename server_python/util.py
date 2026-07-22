@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse
 
 
 class Signer:
-    """火山 OpenAPI HMAC 签名（替代 @volcengine/openapi）"""
+    """火山 OpenAPI HMAC 签名（对应 Node 的 @volcengine/openapi Signer）"""
 
     def __init__(self, request_data, service, region='cn-north-1'):
         self.method = request_data.get('method', 'POST').upper()
@@ -32,7 +32,7 @@ class Signer:
         ts = now.strftime('%Y%m%dT%H%M%SZ')
         self.headers['X-Date'] = ts
 
-        body_str = json.dumps(self.body, separators=(',', ':'), ensure_ascii=False) if self.body else ''
+        body_str = self.body_json()
         body_hash = hashlib.sha256(body_str.encode('utf-8')).hexdigest()
         self.headers['X-Content-Sha256'] = body_hash
 
@@ -73,6 +73,7 @@ class Signer:
     def body_json(self):
         if not self.body:
             return ''
+        # 与 Node JSON.stringify 保持一致：无空格
         return json.dumps(self.body, separators=(',', ':'), ensure_ascii=False)
 
 
@@ -88,6 +89,7 @@ def _key_map(lower_key, headers):
 
 
 def read_files(directory, suffix='.json'):
+    """读取目录下所有指定后缀文件，对应 Node util.readFiles"""
     scenes = {}
     abs_dir = os.path.join(os.path.dirname(__file__), directory)
     if not os.path.exists(abs_dir):
@@ -108,6 +110,7 @@ def read_files(directory, suffix='.json'):
 
 
 async def response_wrapper(api_name, logic_func, contain_metadata=True):
+    """统一响应封装，对应 Node util.wrapper"""
     response_metadata = {'Action': api_name}
     try:
         res = await logic_func()
@@ -121,23 +124,7 @@ async def response_wrapper(api_name, logic_func, contain_metadata=True):
 
 
 def assert_val(expression, msg):
+    """对应 Node util.assert：空值或含空格字符串视为校验失败"""
     if not expression or (isinstance(expression, str) and ' ' in expression):
         print(f'\x1b[31m校验失败: {msg}\x1b[0m')
         raise ValueError(msg)
-
-
-def is_rtc_style_app_id(app_id):
-    return isinstance(app_id, str) and len(app_id) >= 20 and all(c in '0123456789abcdefABCDEF' for c in app_id)
-
-
-def assert_speech_app_id(app_id, label):
-    assert_val(
-        app_id,
-        f'{label} 不能为空。请前往 https://console.volcengine.com/speech/service/app '
-        '创建应用并填写 AppId（纯数字，不是 RTC AppId）',
-    )
-    assert_val(
-        not is_rtc_style_app_id(app_id),
-        f'{label} 填错了：当前值 "{app_id}" 是 RTC AppId，'
-        'ASR/TTS 必须使用语音技术控制台的应用 ID（通常为纯数字）',
-    )
