@@ -35,7 +35,9 @@ log/
 **/__pycache__
 **/.env
 /server_python/scenes/custom.json
+/server_python/scenes/Custom.json
 /Server/scenes/Custom.json
+/Server_python/scenes/Custom.json
 
 # Python
 *.pyc

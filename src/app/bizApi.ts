@@ -71,3 +71,17 @@ export const ConversationAPI = {
       body: JSON.stringify(payload),
     }),
 };
+
+export const ChatAPI = {
+  /** 文本直连方舟，无需 RTC */
+  send: (payload: {
+    SceneID: string;
+    conversation_id?: string;
+    message: string;
+    history?: { role: 'user' | 'assistant' | 'system'; content: string }[];
+  }) =>
+    apiRequest<{ reply: string; model: string }>('/chat', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+};

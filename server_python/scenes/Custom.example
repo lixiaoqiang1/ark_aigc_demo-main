@@ -53,6 +53,7 @@
       "LLMConfig": {
         "Mode": "ArkV3",
         "EndPointId": "YOUR_ARK_ENDPOINT_ID",
+        "ApiKey": "YOUR_ARK_API_KEY",
         "SystemMessages": [
           "你是小宁，性格幽默又善解人意。你在表达时需简明扼要，有自己的观点。"
         ],

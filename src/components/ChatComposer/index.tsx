@@ -7,19 +7,20 @@ import { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Button, Input, Message, Radio } from '@arco-design/web-react';
 import { IconPause } from '@arco-design/web-react/icon';
-import store, { RootState } from '@/store';
+import { RootState } from '@/store';
 import { setChatMode } from '@/store/slices/conversation';
 import {
   appendLocalMsg,
   setInterruptMsg,
-  updateAIGCState,
   updateFullScreen,
   updateShowSubtitle,
 } from '@/store/slices/room';
-import { useJoin, useScene } from '@/lib/useCommon';
+import { useJoin, useLeave, useScene } from '@/lib/useCommon';
 import { useConversationManager } from '@/lib/useConversationManager';
+import { ChatAPI } from '@/app/bizApi';
+import { ApiError } from '@/app/client';
 import RtcClient from '@/lib/RtcClient';
-import { COMMAND, INTERRUPT_PRIORITY } from '@/utils/handler';
+import { COMMAND } from '@/utils/handler';
 import AudioController from '@/pages/MainPage/MainArea/Room/AudioController';
 import InvokeButton from '@/pages/MainPage/MainArea/Antechamber/InvokeButton';
 import { isMobile } from '@/utils/utils';
@@ -29,67 +30,35 @@ interface Props {
   className?: string;
 }
 
-function formatErr(e: any): string {
-  if (!e) return '发送失败';
-  if (typeof e === 'string') return e;
-  if (e instanceof Error && e.message) return e.message;
-  if (typeof e?.message === 'string') return e.message;
-  if (typeof e?.Message === 'string') return e.Message;
-  try {
-    return JSON.stringify(e);
-  } catch {
-    return '发送失败';
-  }
-}
-
-function sleep(ms: number) {
-  return new Promise<void>((resolve) => {
-    setTimeout(() => resolve(), ms);
-  });
-}
-
-/** StartVoiceChat 成功后，仍需等待 Agent 真正加入 RTC 房间 */
-function waitForAgentReceiver(botName: string, timeoutMs = 20000): Promise<boolean> {
-  const started = Date.now();
-  return new Promise((resolve) => {
-    const tick = () => {
-      const remotes = store.getState().room.remoteUsers;
-      const found = remotes.some(
-        (u) =>
-          u.userId === botName ||
-          u.username === botName ||
-          (u.userId || '').includes('voiceChat_')
-      );
-      if (found) {
-        resolve(true);
-        return;
-      }
-      if (Date.now() - started >= timeoutMs) {
-        resolve(false);
-        return;
-      }
-      setTimeout(tick, 300);
-    };
-    tick();
-  });
-}
-
 export default function ChatComposer({ className }: Props) {
   const dispatch = useDispatch();
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
   const [joining, startJoin] = useJoin();
+  const leaveRoom = useLeave();
   const { botName, id: sceneId, isScreenMode, isAvatarScene } = useScene();
   const { chatMode, currentId } = useSelector((s: RootState) => s.conversation);
   const { isJoined, localUser, isAITalking, isAIThinking } = useSelector(
     (s: RootState) => s.room
   );
   const { ensureConversation, persistMessage } = useConversationManager();
+
+  const switchMode = (mode: 'text' | 'voice') => {
+    dispatch(setChatMode(mode));
+    // 切回文本时退出 RTC，不再需要麦/摄像头/挂断工具栏
+    if (mode === 'text' && isJoined) {
+      leaveRoom().catch(() => undefined);
+    }
+  };
+
+  // 文本模式走 HTTP，暂停仅对语音 RTC 有效
   const canPause = Boolean(
-    isJoined && botName && (isAITalking || isAIThinking || sending || RtcClient.audioBotEnabled)
+    chatMode === 'voice' &&
+      isJoined &&
+      botName &&
+      (isAITalking || isAIThinking || RtcClient.audioBotEnabled)
   );
 
-  // 切换 / 新建会话时清空输入框
   useEffect(() => {
     setText('');
   }, [currentId]);
@@ -107,8 +76,12 @@ export default function ChatComposer({ className }: Props) {
   };
 
   const handlePause = () => {
+    if (chatMode !== 'voice') {
+      Message.info('文本模式暂不支持中途暂停');
+      return;
+    }
     if (!botName || !RtcClient.audioBotEnabled) {
-      Message.warning('当前没有进行中的对话');
+      Message.warning('当前没有进行中的语音对话');
       return;
     }
     Promise.resolve(
@@ -121,55 +94,23 @@ export default function ChatComposer({ className }: Props) {
     Message.success('已暂停输出');
   };
 
-  const ensureRoomAndAgent = async () => {
-    if (!sceneId) {
-      throw new Error('场景未加载完成，请刷新后重试');
-    }
-    if (!isJoined) {
-      await startJoin();
-    } else if (!RtcClient.audioBotEnabled) {
-      await RtcClient.startAgent(sceneId);
-      dispatch(updateAIGCState({ isAIGCEnable: true }));
-    }
-
-    if (!RtcClient.audioBotEnabled) {
-      await new Promise<void>((resolve) => {
-        let tries = 0;
-        const timer = setInterval(() => {
-          tries += 1;
-          if (RtcClient.audioBotEnabled || tries >= 20) {
-            clearInterval(timer);
-            resolve();
-          }
-        }, 200);
-      });
-    }
-    if (!RtcClient.audioBotEnabled) {
-      throw new Error('AI 尚未就绪，请稍后再试');
-    }
-    if (!botName) {
-      throw new Error('场景缺少 botName，无法发送文本');
-    }
-
-    const ready = await waitForAgentReceiver(botName);
-    if (!ready) {
-      throw new Error('智能体尚未进入房间，请稍后重试');
-    }
-  };
-
+  /** 文本：HTTP 直连方舟，无需进 RTC / 等 Agent */
   const sendText = async () => {
     const content = text.trim();
     if (!content) return;
-    if (sending || joining) return;
+    if (sending) return;
+    if (!sceneId) {
+      Message.error('场景未加载完成，请刷新后重试');
+      return;
+    }
+
     setSending(true);
-    // 提交即清空，避免失败后重复堆积；失败时再回填
     setText('');
     try {
-      await ensureConversation();
+      const conversationId = await ensureConversation();
       dispatch(updateShowSubtitle({ isShowSubtitle: true }));
-      await ensureRoomAndAgent();
 
-      const userId = localUser.userId || RtcClient.basicInfo?.user_id || 'user';
+      const userId = localUser.userId || 'user';
       dispatch(
         appendLocalMsg({
           value: content,
@@ -188,33 +129,34 @@ export default function ChatComposer({ className }: Props) {
         key: `user:text:${content}:${Date.now()}`,
       });
 
-      try {
-        await RtcClient.commandAgent({
-          agentName: botName,
-          command: COMMAND.EXTERNAL_TEXT_TO_LLM,
-          interruptMode: INTERRUPT_PRIORITY.HIGH,
-          message: content,
-        });
-      } catch (cmdErr: any) {
-        const raw = formatErr(cmdErr);
-        // Agent 刚进房偶发无接收方：再等一会重试一次
-        if (raw.includes('USER_MESSAGE_NO_RECEIVER') || raw.includes('NO_RECEIVER')) {
-          const ok = await waitForAgentReceiver(botName, 10000);
-          if (!ok) throw cmdErr;
-          await sleep(500);
-          await RtcClient.commandAgent({
-            agentName: botName,
-            command: COMMAND.EXTERNAL_TEXT_TO_LLM,
-            interruptMode: INTERRUPT_PRIORITY.HIGH,
-            message: content,
-          });
-        } else {
-          throw cmdErr;
-        }
-      }
+      const { reply } = await ChatAPI.send({
+        SceneID: sceneId,
+        conversation_id: conversationId,
+        message: content,
+      });
+
+      dispatch(
+        appendLocalMsg({
+          value: reply,
+          time: new Date().toISOString(),
+          user: botName || 'assistant',
+          paragraph: true,
+          definite: true,
+          source: 'text',
+          role: 'assistant',
+        })
+      );
+      await persistMessage({
+        role: 'assistant',
+        content: reply,
+        source: 'text',
+        key: `assistant:text:${reply}:${Date.now()}`,
+      });
     } catch (e: any) {
       setText(content);
-      Message.error(formatErr(e));
+      if (!(e instanceof ApiError)) {
+        Message.error(e?.message || '发送失败');
+      }
     } finally {
       setSending(false);
     }
@@ -227,7 +169,7 @@ export default function ChatComposer({ className }: Props) {
           type="button"
           size="small"
           value={chatMode}
-          onChange={(v) => dispatch(setChatMode(v))}
+          onChange={(v) => switchMode(v)}
         >
           <Radio value="text">文本</Radio>
           <Radio value="voice">语音</Radio>
@@ -258,7 +200,7 @@ export default function ChatComposer({ className }: Props) {
             >
               暂停
             </Button>
-            <Button type="primary" loading={sending || joining} onClick={sendText}>
+            <Button type="primary" loading={sending} onClick={sendText}>
               发送
             </Button>
           </div>

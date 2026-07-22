@@ -17,32 +17,35 @@ import styles from './mainArea.module.less';
 
 /**
  * 右侧主区域：始终展示会话历史；底部仅按「文本/语音」互斥显示输入框或语音按钮。
+ * 文本模式不展示语音 ToolBar / 摄像头等 RTC 控件。
  */
 function MainArea() {
   const { isJoined, isShowSubtitle, isFullScreen } = useSelector((s: RootState) => s.room);
+  const { chatMode } = useSelector((s: RootState) => s.conversation);
   const { isAvatarScene } = useScene();
+  const isVoiceJoined = chatMode === 'voice' && isJoined;
 
   return (
     <div
       className={`${roomStyle.wrapper} ${styles.panel} ${isMobile() ? roomStyle.mobile : ''}`}
     >
-      {isJoined && !isMobile() && (isFullScreen || isAvatarScene)
+      {isVoiceJoined && !isMobile() && (isFullScreen || isAvatarScene)
         ? null
-        : !isMobile() && (
+        : !isMobile() && chatMode === 'voice' && (
             <AiAvatarCard
               showUserTag={!isShowSubtitle}
               showStatus={isJoined}
               className={isShowSubtitle ? roomStyle.subtitleAiAvatar : ''}
             />
           )}
-      {isJoined && !isMobile() ? <CameraArea /> : null}
-      {isJoined && isMobile() ? (
+      {isVoiceJoined && !isMobile() ? <CameraArea /> : null}
+      {isVoiceJoined && isMobile() ? (
         <div className={roomStyle.mobilePlayer} id="mobile-local-player" />
       ) : null}
 
       <Conversation className={`${roomStyle.conversation} ${styles.conversation}`} showSubtitle />
 
-      {isJoined ? <ToolBar className={roomStyle.toolBar} /> : null}
+      {isVoiceJoined ? <ToolBar className={roomStyle.toolBar} /> : null}
 
       <div className={styles.composerDock}>
         <ChatComposer />

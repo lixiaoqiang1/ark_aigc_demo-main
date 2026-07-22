@@ -34,8 +34,8 @@ export function usePersistSubtitles() {
         msg.user === botName || (msg.user || '').includes('voiceChat_');
       const role = fromBot ? 'assistant' : 'user';
       const source = msg.source || (chatMode === 'text' && !fromBot ? 'text' : 'voice');
-      // 文本模式下用户消息已在发送时落库
-      if (role === 'user' && source === 'text') return;
+      // 文本模式消息已在 ChatComposer 发送时落库
+      if (source === 'text') return;
 
       persistMessage({
         role,

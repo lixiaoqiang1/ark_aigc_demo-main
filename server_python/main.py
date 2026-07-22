@@ -2,6 +2,8 @@
 # SPDX-license-identifier: BSD-3-Clause
 
 from contextlib import asynccontextmanager
+from pathlib import Path
+import os
 import time
 import uuid
 
@@ -10,10 +12,35 @@ import uvicorn
 from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
+
+def _load_dotenv_files(*paths: str) -> None:
+    """轻量加载 .env（不覆盖已有环境变量）。"""
+    for path in paths:
+        p = Path(path)
+        if not p.is_file():
+            continue
+        for raw in p.read_text(encoding='utf-8').splitlines():
+            line = raw.strip()
+            if not line or line.startswith('#') or '=' not in line:
+                continue
+            key, val = line.split('=', 1)
+            key = key.strip()
+            val = val.strip().strip('"').strip("'")
+            if key and key not in os.environ:
+                os.environ[key] = val
+
+
+_BASE = Path(__file__).resolve().parent
+_load_dotenv_files(
+    str(_BASE / '.env'),
+    str(_BASE.parent / 'rag_llm_server' / '.env'),
+)
+
 from auth_utils import get_current_user
 from database import init_db
 from routers import auth as auth_router
 from routers import conversations as conversations_router
+from routers import chat as chat_router
 from token_builder import AccessToken, PRIVILEGES
 from util import assert_val, read_files, response_wrapper, Signer
 
@@ -40,6 +67,7 @@ app.add_middleware(
 
 app.include_router(auth_router.router)
 app.include_router(conversations_router.router)
+app.include_router(chat_router.router)
 
 
 @app.post('/proxy')
