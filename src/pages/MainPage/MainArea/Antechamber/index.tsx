@@ -7,23 +7,30 @@ import { useDispatch } from 'react-redux';
 import { isMobile } from '@/utils/utils';
 import InvokeButton from '@/pages/MainPage/MainArea/Antechamber/InvokeButton';
 import { useJoin, useScene } from '@/lib/useCommon';
+import { useConversationManager } from '@/lib/useConversationManager';
 import AIChangeCard from '@/components/AiChangeCard';
 import { updateFullScreen, updateShowSubtitle } from '@/store/slices/room';
+import { setChatMode } from '@/store/slices/conversation';
 import style from './index.module.less';
 
 function Antechamber() {
   const dispatch = useDispatch();
   const [joining, dispatchJoin] = useJoin();
   const { isScreenMode, isAvatarScene } = useScene();
+  const { ensureConversation } = useConversationManager();
 
-  const handleJoinRoom = () => {
-    dispatch(updateFullScreen({ isFullScreen: !isMobile() && !isScreenMode && !isAvatarScene })); // 初始化
+  const handleJoinRoom = async () => {
+    dispatch(updateFullScreen({ isFullScreen: !isMobile() && !isScreenMode && !isAvatarScene }));
     dispatch(updateShowSubtitle({ isShowSubtitle: !isAvatarScene }));
+    dispatch(setChatMode('voice'));
 
     if (!joining) {
-
-      // 开启RTC服务，你进来，Ai进来，开始通话
-      dispatchJoin();
+      try {
+        await ensureConversation();
+        await dispatchJoin();
+      } catch {
+        // useJoin 内已 Message 提示
+      }
     }
   };
 

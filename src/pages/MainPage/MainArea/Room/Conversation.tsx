@@ -14,25 +14,33 @@ import USER_AVATAR from '@/assets/img/userAvatar.png';
 import styles from './index.module.less';
 import AIAvatarReadying from '@/components/AIAvatarLoading';
 
-const lines: (string | React.ReactNode)[] = [];
-
-function Conversation(props: React.HTMLAttributes<HTMLDivElement> & { showSubtitle: boolean }) {
-  const { className, showSubtitle, ...rest } = props;
+function Conversation(props: React.HTMLAttributes<HTMLDivElement> & { showSubtitle?: boolean }) {
+  const { className, showSubtitle = true, ...rest } = props;
   const room = useSelector((state: RootState) => state.room);
-  const { msgHistory, isFullScreen } = room;
+  const { msgHistory, isFullScreen, isJoined } = room;
   const { userId } = useSelector((state: RootState) => state.room.localUser);
   const { isAITalking, isUserTalking, scene } = useSelector((state: RootState) => state.room);
-  const isAIReady = msgHistory.length > 0;
+  const hasMessages = msgHistory.length > 0;
   const containerRef = useRef<HTMLDivElement>(null);
   const { botName, icon, isAvatarScene } = useScene();
 
-  const isUserTextLoading = (owner: string) => {
-    return owner === userId && isUserTalking;
+  const isUserMsg = (msg: (typeof msgHistory)[0]) => {
+    if (msg.role === 'user') return true;
+    if (msg.role === 'assistant') return false;
+    if (userId && msg.user === userId) return true;
+    if (msg.user === 'user') return true;
+    return false;
   };
 
-  const isAITextLoading = (owner: string) => {
-    return (owner === botName || owner.includes('voiceChat_')) && isAITalking;
+  const isRobotMsg = (msg: (typeof msgHistory)[0]) => {
+    if (msg.role === 'assistant') return true;
+    if (msg.role === 'user') return false;
+    return msg.user === botName || (msg.user || '').includes('voiceChat_') || msg.user === 'assistant';
   };
+
+  const isUserTextLoading = (owner: string) => owner === userId && isUserTalking;
+  const isAITextLoading = (owner: string) =>
+    (owner === botName || (owner || '').includes('voiceChat_')) && isAITalking;
 
   useEffect(() => {
     const container = containerRef.current;
@@ -47,61 +55,58 @@ function Conversation(props: React.HTMLAttributes<HTMLDivElement> & { showSubtit
       className={`${styles.conversation} ${className} ${isFullScreen ? styles.fullScreen : ''} ${
         isMobile() ? styles.mobileConversation : ''
       }`}
-      style={isAvatarScene && !isAIReady ? { justifyContent: 'center' } : {}}
+      style={isAvatarScene && isJoined && !hasMessages ? { justifyContent: 'center' } : {}}
       {...rest}
     >
-      {lines.map((line) => line)}
-      {!isAIReady ? (
+      {!hasMessages ? (
         <div className={styles.aiReadying}>
-          {isAvatarScene ? (
-            <AIAvatarReadying />
+          {isJoined ? (
+            isAvatarScene ? (
+              <AIAvatarReadying />
+            ) : (
+              <>
+                <Spin size={16} className={styles['aiReading-spin']} />
+                AI 准备中, 请稍侯
+              </>
+            )
           ) : (
-            <>
-              <Spin size={16} className={styles['aiReading-spin']} />
-              AI 准备中, 请稍侯
-            </>
+            <span>选择左侧会话查看历史，或开始文本 / 语音对话</span>
           )}
         </div>
-      ) : (
-        ''
-      )}
-      {(showSubtitle ? msgHistory : [])?.map(({ value, user, isInterrupted }, index) => {
-        const isUserMsg = user === userId;
-        const isRobotMsg = user === botName || user.includes('voiceChat_');
-        if (!isUserMsg && !isRobotMsg) {
-          return '';
+      ) : null}
+      {(showSubtitle ? msgHistory : []).map((msg, index) => {
+        const { value, user, isInterrupted } = msg;
+        const userSide = isUserMsg(msg);
+        const robotSide = isRobotMsg(msg);
+        if (!userSide && !robotSide) {
+          return null;
         }
         return (
           <div
             key={`msg-container-${index}`}
             className={styles.mobileLine}
-            style={{ justifyContent: isUserMsg && isMobile() ? 'flex-end' : '' }}
+            style={{ justifyContent: userSide && isMobile() ? 'flex-end' : '' }}
           >
             {!isMobile() && (
               <div className={styles.msgName}>
                 <div className={styles.avatar}>
-                  <img src={isUserMsg ? USER_AVATAR : icon} alt="Avatar" />
+                  <img src={userSide ? USER_AVATAR : icon} alt="Avatar" />
                 </div>
-                {isUserMsg ? '我' : scene}
+                {userSide ? '我' : scene || '助手'}
               </div>
             )}
-            <div
-              className={`${styles.sentence} ${isUserMsg ? styles.user : styles.robot}`}
-              key={`msg-${index}`}
-            >
+            <div className={`${styles.sentence} ${userSide ? styles.user : styles.robot}`}>
               <div className={styles.content}>
                 {value}
                 <div className={styles['loading-wrapper']}>
-                  {isAIReady &&
+                  {hasMessages &&
                   (isUserTextLoading(user) || isAITextLoading(user)) &&
                   index === msgHistory.length - 1 ? (
                     <Loading gap={3} className={styles.loading} dotClassName={styles.dot} />
-                  ) : (
-                    ''
-                  )}
+                  ) : null}
                 </div>
               </div>
-              {!isUserMsg && isInterrupted ? <Tag className={styles.interruptTag}>已打断</Tag> : ''}
+              {!userSide && isInterrupted ? <Tag className={styles.interruptTag}>已打断</Tag> : null}
             </div>
           </div>
         );

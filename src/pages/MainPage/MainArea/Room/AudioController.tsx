@@ -26,10 +26,12 @@ function AudioController(props: React.HTMLAttributes<HTMLDivElement>) {
   const isLoading = volume >= THRESHOLD_VOLUME && isAudioPublished;
 
   const handleInterrupt = () => {
-    RtcClient.commandAgent({
-      agentName: botName,
-      command: COMMAND.INTERRUPT,
-    });
+    Promise.resolve(
+      RtcClient.commandAgent({
+        agentName: botName,
+        command: COMMAND.INTERRUPT,
+      })
+    ).catch(() => undefined);
     dispatch(setInterruptMsg());
   };
   return (

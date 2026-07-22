@@ -1,18 +1,34 @@
 # Copyright 2025 Beijing Volcano Engine Technology Co., Ltd. All Rights Reserved.
 # SPDX-license-identifier: BSD-3-Clause
 
+from contextlib import asynccontextmanager
 import time
 import uuid
 
 import httpx
 import uvicorn
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
+from auth_utils import get_current_user
+from database import init_db
+from routers import auth as auth_router
+from routers import conversations as conversations_router
 from token_builder import AccessToken, PRIVILEGES
 from util import assert_val, read_files, response_wrapper, Signer
 
-app = FastAPI()
+SCENES = read_files('./scenes', '.json')
+VOLC_HOST = 'rtc.volcengineapi.com'
+VOLC_VERSION = '2024-12-01'
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    init_db()
+    yield
+
+
+app = FastAPI(lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -22,13 +38,12 @@ app.add_middleware(
     allow_headers=['*'],
 )
 
-SCENES = read_files('./scenes', '.json')
-VOLC_HOST = 'rtc.volcengineapi.com'
-VOLC_VERSION = '2024-12-01'
+app.include_router(auth_router.router)
+app.include_router(conversations_router.router)
 
 
 @app.post('/proxy')
-async def proxy(request: Request):
+async def proxy(request: Request, _user: dict = Depends(get_current_user)):
     """代理 AIGC 的 OpenAPI 请求（对应 Node app.js proxy）"""
 
     async def logic():
@@ -105,16 +120,16 @@ async def proxy(request: Request):
 
 
 @app.post('/getScenes')
-async def get_scenes(_request: Request):
+async def get_scenes(_request: Request, _user: dict = Depends(get_current_user)):
     """获取场景列表并自动生成 Token（对应 Node app.js getScenes）"""
 
     async def logic():
         result_scenes = []
 
         for key, data in SCENES.items():
-            scene_config = data.get('SceneConfig', {})
-            rtc_config = data.get('RTCConfig', {})
-            voice_chat = data.get('VoiceChat', {})
+            scene_config = dict(data.get('SceneConfig') or {})
+            rtc_config = dict(data.get('RTCConfig') or {})
+            voice_chat = data.get('VoiceChat') or {}
 
             app_id = rtc_config.get('AppId')
             room_id = rtc_config.get('RoomId')
@@ -125,20 +140,31 @@ async def get_scenes(_request: Request):
             assert_val(app_id, f'{key} 场景的 RTCConfig.AppId 不能为空')
 
             if app_id and (not token or not user_id or not room_id):
-                rtc_config['RoomId'] = voice_chat['RoomId'] = room_id or str(uuid.uuid4())
-                rtc_config['UserId'] = voice_chat['AgentConfig']['TargetUserId'][0] = (
-                    user_id or str(uuid.uuid4())
+                new_room_id = room_id or str(uuid.uuid4())
+                new_user_id = user_id or str(uuid.uuid4())
+                rtc_config['RoomId'] = new_room_id
+                voice_chat['RoomId'] = new_room_id
+                rtc_config['UserId'] = new_user_id
+                voice_chat.setdefault('AgentConfig', {}).setdefault('TargetUserId', [''])[0] = (
+                    new_user_id
                 )
+
+                # 回写到内存场景，保证 StartVoiceChat 使用同一 RoomId/UserId
+                data.setdefault('RTCConfig', {})['RoomId'] = new_room_id
+                data['RTCConfig']['UserId'] = new_user_id
+                data.setdefault('VoiceChat', {})['RoomId'] = new_room_id
+                data['VoiceChat'].setdefault('AgentConfig', {}).setdefault('TargetUserId', [''])[
+                    0
+                ] = new_user_id
 
                 assert_val(app_key, f'自动生成 Token 时, {key} 场景的 AppKey 不可为空')
 
-                token_builder = AccessToken(
-                    app_id, app_key, rtc_config['RoomId'], rtc_config['UserId']
-                )
+                token_builder = AccessToken(app_id, app_key, new_room_id, new_user_id)
                 token_builder.add_privilege(PRIVILEGES['PrivSubscribeStream'], 0)
                 token_builder.add_privilege(PRIVILEGES['PrivPublishStream'], 0)
                 token_builder.expire_time(int(time.time()) + 24 * 3600)
                 rtc_config['Token'] = token_builder.serialize()
+                data['RTCConfig']['Token'] = rtc_config['Token']
 
             scene_config['id'] = key
             scene_config['botName'] = (voice_chat.get('AgentConfig') or {}).get('UserId')
@@ -157,7 +183,6 @@ async def get_scenes(_request: Request):
             scene_config['isAvatarScene'] = avatar_config.get('Enabled')
             scene_config['avatarBgUrl'] = avatar_config.get('BackgroundUrl')
 
-            # 与 Node 一致：从返回给前端的配置中移除 AppKey
             rtc_config.pop('AppKey', None)
 
             result_scenes.append({

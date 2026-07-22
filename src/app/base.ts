@@ -5,9 +5,26 @@
 
 import { Message } from '@arco-design/web-react';
 import { AIGC_PROXY_HOST } from '@/config';
+import { clearAuth, getToken } from '@/utils/authStorage';
 import type { RequestResponse, ApiConfig, ApiNames, Apis } from './type';
 
 type Headers = Record<string, string>;
+
+const authHeaders = (): Headers => {
+  const token = getToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+};
+
+const handleUnauthorized = async (res: Response) => {
+  if (res.status === 401) {
+    clearAuth();
+    if (!window.location.pathname.startsWith('/login') && !window.location.pathname.startsWith('/register')) {
+      window.location.href = '/login';
+    }
+    throw new Error('请先登录');
+  }
+  return res;
+};
 
 export type DeepPartial<T> = {
   [P in keyof T]?: T[P] extends Array<infer U>
@@ -35,10 +52,11 @@ export const requestGetMethod = ({
       .join('&')}`;
     const res = await fetch(url, {
       headers: {
+        ...authHeaders(),
         ...headers,
       },
     });
-    return res;
+    return handleUnauthorized(res);
   };
 };
 
@@ -61,11 +79,12 @@ export const requestPostMethod = ({
       method: 'post',
       headers: {
         'content-type': 'application/json',
+        ...authHeaders(),
         ...headers,
       },
       body: (isJson ? JSON.stringify(params) : params) as BodyInit,
     });
-    return res;
+    return handleUnauthorized(res);
   };
 };
 
@@ -75,18 +94,23 @@ export const requestPostMethod = ({
  */
 export const resultHandler = (res: RequestResponse) => {
   const { Result, ResponseMetadata } = res || {};
+  if (!ResponseMetadata) {
+    // 兼容异常响应体
+    if (Result !== undefined) return Result;
+    throw new Error('服务端响应格式异常');
+  }
   // Record request id for debug.
   if (ResponseMetadata.Action === 'StartVoiceChat') {
     const requestId = ResponseMetadata.RequestId;
     requestId && sessionStorage.setItem('RequestID', requestId);
   }
   if (ResponseMetadata.Error) {
-    Message.error(
-      `[${ResponseMetadata?.Action}]call failed(reason: ${ResponseMetadata.Error?.Message})`
-    );
-    throw new Error(
-      `[${ResponseMetadata?.Action}]call failed(${JSON.stringify(ResponseMetadata, null, 2)})`
-    );
+    const errMsg =
+      ResponseMetadata.Error?.Message ||
+      ResponseMetadata.Error?.Code ||
+      'unknown error';
+    Message.error(`[${ResponseMetadata?.Action}]call failed(reason: ${errMsg})`);
+    throw new Error(`[${ResponseMetadata?.Action}] ${errMsg}`);
   }
   if (typeof Result === 'string' && Result !== 'ok') {
     Message.error(`[${ResponseMetadata?.Action}] ${Result}`);

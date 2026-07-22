@@ -6,14 +6,13 @@
 import { useEffect, useState, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import VERTC, { MediaType } from '@volcengine/rtc';
-import { Modal } from '@arco-design/web-react';
+import { Modal, Message } from '@arco-design/web-react';
 import RtcClient from '@/lib/RtcClient';
 import {
-  clearCurrentMsg,
-  clearHistoryMsg,
   localJoinRoom,
   localLeaveRoom,
   updateAIGCState,
+  updateAITalkState,
   updateLocalUser,
 } from '@/store/slices/room';
 
@@ -179,7 +178,6 @@ export const useJoin = (): [
   const handleAIGCModeStart = async () => {
     if (room.isAIGCEnable) {
       await RtcClient.stopAgent(id);
-      dispatch(clearCurrentMsg());
       await RtcClient.startAgent(id);
     } else {
       await RtcClient.startAgent(id);
@@ -196,55 +194,79 @@ export const useJoin = (): [
     if (!isSupported) {
       Modal.error({
         title: '不支持 RTC',
-        content: '您的浏览器可能不支持 RTC 功能，请尝试更换浏览器或升级浏览器后再重试。',
+        content: '您的浏览器可能不支持 RTC 功能，请尝试更换浏览器或升级浏览器后再试。',
       });
       return;
     }
 
-    setJoining(true);
-
-    /** 1. Create RTC Engine */
-    await RtcClient.createEngine();
-
-    /** 2.1 Set events callbacks */
-    RtcClient.addEventListeners(listeners);
-
-    /** 2.2 RTC starting to join room */
-    await RtcClient.joinRoom();
-    /** 3. Set users' devices info */
-    const mediaDevices = await RtcClient.getDevices({
-      audio: true,
-      video: false,
-    });
-
-    dispatch(
-      localJoinRoom({
-        roomId: RtcClient.basicInfo.room_id,
-        user: {
-          username: RtcClient.basicInfo.user_id,
-          userId: RtcClient.basicInfo.user_id,
-        },
-      })
-    );
-    dispatch(
-      updateSelectedDevice({
-        selectedMicrophone: mediaDevices.audioInputs[0]?.deviceId,
-        selectedCamera: mediaDevices.videoInputs[0]?.deviceId,
-      })
-    );
-    dispatch(updateMediaInputs(mediaDevices));
-
-    setJoining(false);
-
-    if (devicePermissions.audio) {
-      try {
-        await switchMic();
-      } catch (e) {
-        logger.debug('No permission for mic');
-      }
+    if (!id) {
+      throw new Error('场景未加载完成，请稍后重试');
     }
 
-    handleAIGCModeStart();
+    setJoining(true);
+
+    try {
+      /** 1. Create RTC Engine */
+      await RtcClient.createEngine();
+
+      /** 2.1 Set events callbacks */
+      RtcClient.addEventListeners(listeners);
+
+      /** 2.2 RTC starting to join room */
+      await RtcClient.joinRoom();
+      /** 3. Set users' devices info */
+      const mediaDevices = await RtcClient.getDevices({
+        audio: true,
+        video: false,
+      });
+
+      dispatch(
+        localJoinRoom({
+          roomId: RtcClient.basicInfo.room_id,
+          user: {
+            username: RtcClient.basicInfo.user_id,
+            userId: RtcClient.basicInfo.user_id,
+          },
+        })
+      );
+      dispatch(
+        updateSelectedDevice({
+          selectedMicrophone: mediaDevices.audioInputs[0]?.deviceId,
+          selectedCamera: mediaDevices.videoInputs[0]?.deviceId,
+        })
+      );
+      dispatch(updateMediaInputs(mediaDevices));
+
+      if (devicePermissions.audio) {
+        try {
+          await switchMic();
+        } catch (e) {
+          logger.debug('No permission for mic');
+        }
+      }
+
+      await handleAIGCModeStart();
+      return true;
+    } catch (e: any) {
+      const msg =
+        (typeof e?.message === 'string' && e.message) ||
+        (typeof e?.Message === 'string' && e.Message) ||
+        (typeof e === 'string' ? e : null) ||
+        (e ? JSON.stringify(e) : '进房失败');
+      Message.error(msg);
+      try {
+        await RtcClient.leaveRoom();
+      } catch {
+        // ignore cleanup errors
+      }
+      dispatch(localLeaveRoom());
+      dispatch(updateAIGCState({ isAIGCEnable: false }));
+      // 不要再抛出裸对象，统一 Error，避免 CRA 红屏显示 [object Object]
+      const err = new Error(msg);
+      throw err;
+    } finally {
+      setJoining(false);
+    }
   }
 
   return [joining, disPatchJoin];
@@ -264,9 +286,9 @@ export const useLeave = () => {
     ]);
     await RtcClient.stopAgent(idRef.current);
     await RtcClient.leaveRoom();
-    dispatch(clearHistoryMsg());
-    dispatch(clearCurrentMsg());
+    // 离开房间不等于退出登录：保留当前会话消息展示（已落库可回放）
     dispatch(localLeaveRoom());
     dispatch(updateAIGCState({ isAIGCEnable: false }));
+    dispatch(updateAITalkState({ isAITalking: false }));
   };
 };

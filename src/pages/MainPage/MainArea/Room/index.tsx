@@ -7,7 +7,6 @@ import { useSelector } from 'react-redux';
 import Conversation from './Conversation';
 import ToolBar from './ToolBar';
 import CameraArea from './CameraArea';
-import AudioController from './AudioController';
 import { isMobile } from '@/utils/utils';
 import style from './index.module.less';
 import AiAvatarCard from '@/components/AiAvatarCard';
@@ -16,6 +15,7 @@ import UserTag from '@/components/UserTag';
 import FullScreenCard from '@/components/FullScreenCard';
 import MobileToolBar from '@/pages/Mobile/MobileToolBar';
 import { useScene } from '@/lib/useCommon';
+import ChatComposer from '@/components/ChatComposer';
 
 function Room() {
   const room = useSelector((state: RootState) => state.room);
@@ -40,7 +40,7 @@ function Room() {
       {isMobile() ? null : <CameraArea />}
       <Conversation className={style.conversation} showSubtitle={isShowSubtitle} />
       <ToolBar className={style.toolBar} />
-      <AudioController className={style.controller} />
+      <ChatComposer className={style.controller} />
       <div className={style.declare}>AI生成内容由大模型生成，不能完全保障真实</div>
     </div>
   );

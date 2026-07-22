@@ -11,39 +11,73 @@ import Menu from './Menu';
 import { useIsMobile } from '@/utils/utils';
 import Apis from '@/app/index';
 import MainArea from './MainArea';
+import ConversationSidebar from '@/components/ConversationSidebar';
 import { ABORT_VISIBILITY_CHANGE, useLeave } from '@/lib/useCommon';
-import { RTCConfig, SceneConfig, updateRTCConfig, updateScene, updateSceneConfig } from '@/store/slices/room';
+import { useConversationManager } from '@/lib/useConversationManager';
+import { usePersistSubtitles } from '@/lib/usePersistSubtitles';
+import {
+  RTCConfig,
+  SceneConfig,
+  updateRTCConfig,
+  updateScene,
+  updateSceneConfig,
+} from '@/store/slices/room';
+import { setCurrentConversationId, upsertConversation } from '@/store/slices/conversation';
+import { ConversationAPI } from '@/app/bizApi';
 import styles from './index.module.less';
 
 export default function () {
-
   const leaveRoom = useLeave();
   const dispatch = useDispatch();
+  const { refreshList, loadMessages } = useConversationManager();
+  usePersistSubtitles();
 
   const getScenes = async () => {
-    const { scenes }: {
+    const {
+      scenes,
+    }: {
       scenes: {
         rtc: RTCConfig;
         scene: SceneConfig;
       }[];
     } = await Apis.Basic.getScenes();
     dispatch(updateScene(scenes[0].scene.id));
-    dispatch(updateSceneConfig(
-      scenes.reduce<Record<string, SceneConfig>>((prev, cur) => {
-        prev[cur.scene.id] = cur.scene;
-        return prev;
-      }, {})
-    ));
-    dispatch(updateRTCConfig(
-      scenes.reduce<Record<string, RTCConfig>>((prev, cur) => {
-        prev[cur.scene.id] = cur.rtc;
-        return prev;
-      }, {})
-    ));
-  }
+    dispatch(
+      updateSceneConfig(
+        scenes.reduce<Record<string, SceneConfig>>((prev, cur) => {
+          prev[cur.scene.id] = cur.scene;
+          return prev;
+        }, {})
+      )
+    );
+    dispatch(
+      updateRTCConfig(
+        scenes.reduce<Record<string, RTCConfig>>((prev, cur) => {
+          prev[cur.scene.id] = cur.rtc;
+          return prev;
+        }, {})
+      )
+    );
+  };
 
   useEffect(() => {
-    getScenes();
+    (async () => {
+      try {
+        await getScenes();
+        const list = await refreshList();
+        if (list.length) {
+          dispatch(setCurrentConversationId(list[0].id));
+          await loadMessages(list[0].id);
+        } else {
+          const created = await ConversationAPI.create();
+          dispatch(upsertConversation(created));
+          dispatch(setCurrentConversationId(created.id));
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    })();
+
     const isOriginalDemo = window.location.host.startsWith('localhost');
     const handler = () => {
       if (
@@ -68,6 +102,7 @@ export default function () {
           padding: useIsMobile() ? '' : '24px',
         }}
       >
+        {useIsMobile() ? null : <ConversationSidebar />}
         <div className={`${styles.mainArea} ${useIsMobile() ? styles.isMobile : ''}`}>
           <MainArea />
         </div>

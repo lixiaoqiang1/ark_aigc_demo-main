@@ -14,7 +14,9 @@
 
   .mainArea {
     position: relative;
-    width: calc(100% - 220px);
+    flex: 1;
+    width: auto;
+    min-width: 0;
     height: 100%;
     margin-right: 2%;
     background-color: white;
@@ -33,5 +35,6 @@
     position: relative;
     width: 200px;
     height: 100%;
+    flex-shrink: 0;
   }
 }

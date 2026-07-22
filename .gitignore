@@ -56,5 +56,6 @@ log/
 *.swp
 *.swo
 
-# OS
-Thumbs.db
+**/server_python/data/
+**/Server_python/data/
+*.db

@@ -34,6 +34,12 @@ export interface Msg {
   paragraph?: boolean;
   definite?: boolean;
   isInterrupted?: boolean;
+  /** voice | text，历史回放或本地发送时标记 */
+  source?: 'voice' | 'text';
+  /** 是否来自服务端历史（不参与实时落库） */
+  fromHistory?: boolean;
+  /** 业务角色，历史回放时用于渲染左右气泡 */
+  role?: 'user' | 'assistant';
 }
 
 export interface SceneConfig {
@@ -352,6 +358,29 @@ export const roomSlice = createSlice({
       state.isAITalking = false;
       state.isUserTalking = false;
     },
+    loadHistoryMsg: (
+      state,
+      {
+        payload,
+      }: {
+        payload: Msg[];
+      }
+    ) => {
+      state.msgHistory = payload;
+      state.currentConversation = {};
+      state.isAITalking = false;
+      state.isUserTalking = false;
+    },
+    appendLocalMsg: (
+      state,
+      {
+        payload,
+      }: {
+        payload: Msg;
+      }
+    ) => {
+      state.msgHistory.push(payload);
+    },
     updateShowSubtitle: (state, { payload }) => {
       state.isShowSubtitle = payload.isShowSubtitle;
     },
@@ -381,6 +410,8 @@ export const {
   setHistoryMsg,
   clearHistoryMsg,
   clearCurrentMsg,
+  loadHistoryMsg,
+  appendLocalMsg,
   setInterruptMsg,
   updateNetworkQuality,
   updateScene,

@@ -1,0 +1,25 @@
+/**
+ * Copyright 2025 Beijing Volcano Engine Technology Co., Ltd. All Rights Reserved.
+ * SPDX-license-identifier: BSD-3-Clause
+ */
+
+.panel {
+  /* 覆盖进房页默认 max-height，历史列表需要占满中间区域 */
+  padding-bottom: 110px !important;
+}
+
+.conversation {
+  flex: 1;
+  min-height: 120px;
+  max-height: calc(100% - 160px) !important;
+  margin-top: 12px !important;
+}
+
+.composerDock {
+  position: absolute;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%);
+  z-index: 6;
+  width: min(640px, 90%);
+}

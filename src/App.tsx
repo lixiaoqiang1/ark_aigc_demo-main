@@ -3,8 +3,11 @@
  * SPDX-license-identifier: BSD-3-Clause
  */
 
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import MainPage from './pages/MainPage';
+import LoginPage from './pages/Auth/Login';
+import RegisterPage from './pages/Auth/Register';
+import RequireAuth from './components/RequireAuth';
 import '@arco-design/web-react/dist/css/arco.css';
 
 function App() {
@@ -12,10 +15,17 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/">
-          <Route index element={<MainPage />} />
-          <Route path="/*" element={<MainPage />} />
-        </Route>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/register" element={<RegisterPage />} />
+        <Route
+          path="/"
+          element={
+            <RequireAuth>
+              <MainPage />
+            </RequireAuth>
+          }
+        />
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );

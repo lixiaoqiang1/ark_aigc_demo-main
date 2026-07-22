@@ -1,0 +1,73 @@
+/**
+ * Copyright 2025 Beijing Volcano Engine Technology Co., Ltd. All Rights Reserved.
+ * SPDX-license-identifier: BSD-3-Clause
+ */
+
+.composer {
+  width: min(680px, 94%);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.modeRow {
+  display: flex;
+  justify-content: center;
+}
+
+.textPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #e5e6eb;
+  border-radius: 12px;
+  background: #fafbfc;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.04);
+}
+
+.textarea {
+  width: 100%;
+
+  :global(.arco-textarea) {
+    min-height: 84px !important;
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    font-size: 14px;
+    line-height: 22px;
+    padding: 4px 2px !important;
+    resize: none;
+  }
+}
+
+.actionRow {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.pauseBtn {
+  color: #4e5969;
+}
+
+.voiceRow {
+  min-height: 40px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.voiceStart {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 4px 0 8px;
+}
+
+.hint {
+  color: #86909c;
+  font-size: 13px;
+  text-align: center;
+}

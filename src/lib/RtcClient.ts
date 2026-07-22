@@ -400,21 +400,28 @@ export class RTCClient {
     interruptMode?: INTERRUPT_PRIORITY;
     message?: string;
   }) => {
-    if (this.audioBotEnabled) {
-      this.engine.sendUserBinaryMessage(
-        agentName,
-        string2tlv(
-          JSON.stringify({
-            Command: command,
-            InterruptMode: interruptMode,
-            Message: message,
-          }),
-          'ctrl'
-        )
-      );
-      return;
+    if (!this.audioBotEnabled || !this.engine) {
+      console.warn('commandAgent skipped, bot not enabled.');
+      return Promise.resolve();
     }
-    console.warn('Interrupt failed, bot not enabled.');
+    try {
+      const payload = string2tlv(
+        JSON.stringify({
+          Command: command,
+          InterruptMode: interruptMode,
+          Message: message,
+        }),
+        'ctrl'
+      );
+      const ret = this.engine.sendUserBinaryMessage(agentName, payload) as void | Promise<unknown>;
+      return Promise.resolve(ret).catch((err) => {
+        console.warn('sendUserBinaryMessage failed', err);
+        throw err instanceof Error ? err : new Error(JSON.stringify(err));
+      });
+    } catch (err: any) {
+      console.warn('commandAgent failed', err);
+      return Promise.reject(err instanceof Error ? err : new Error(JSON.stringify(err)));
+    }
   };
 
   /**
