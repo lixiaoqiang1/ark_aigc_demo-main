@@ -4,13 +4,15 @@
  */
 
 .header {
-  height: 48px;
-  background: white;
+  height: 52px;
+  background: #fff;
   width: 100%;
   display: flex;
   align-items: center;
   justify-content: space-between;
   position: relative;
+  border-bottom: 1px solid #eaedf1;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.04);
 
   :global {
     .arco-popover-content-top {
@@ -24,6 +26,7 @@
   align-items: center;
   justify-content: space-between;
   margin-left: 24px;
+  gap: 8px;
 
   :global {
     img {
@@ -39,103 +42,204 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  row-gap: 8px;
-  justify-content: space-between;
+  row-gap: 4px;
+  padding: 4px 0;
 }
 
 .header-logo-text {
-  background: linear-gradient(90deg, #004FFF 38.86%, #9865FF 100%);
+  background: linear-gradient(90deg, #004fff 38.86%, #9865ff 100%);
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
-  font-size: 16px;
+  font-size: 15px;
+  font-weight: 600;
 }
 
 .header-right {
   z-index: 2;
-  color: #fff;
   display: flex;
   align-items: center;
-  :global {
-    span {
-      height: 24px;
-    }
-  }
+  gap: 4px;
 }
 
 .header-setting-btn {
   background-color: transparent;
   border: none;
-  margin-right: 24px;
-  color: #000000;
-  font-size: 16px;
+  color: #4e5969;
   cursor: pointer;
-}
+  padding: 4px;
+  border-radius: 6px;
+  transition: background 0.15s;
 
-.header-pop {
-  :global {
-    .ant-popover-arrow {
-      left: 16px;
-      .ant-popover-arrow-content {
-        &:before {
-          background-color: white;
-        }
-      }
-    }
-    .ant-popover-content {
-      margin-left: 12px;
-    }
-    .ant-popover-inner {
-      margin-right: 12px;
-    }
-    .ant-popover-inner-content {
-      padding: 0;
-      background-color: white;
-      position: relative;
-      width: 100px;
-      height: 100px;
-      display: flex;
-      align-items: center;
-      flex-direction: column;
-      justify-content: space-between;
-      padding-bottom: 7px;
-      padding-top: 7px;
-      cursor: pointer;
-      color: black;
-
-      div {
-        font-size: 13px;
-        font-weight: 400;
-        line-height: 20px;
-        &:hover {
-          color: #1664ff;
-        }
-      }
-    }
+  &:hover {
+    background: #f2f3f5;
   }
 }
 
-.divider {
-  margin-top: 2px;
-  margin-bottom: 2px;
-  min-width: 70%;
-  width: 70%;
-}
-
 .header-right-text {
-  color: #000000;
-  margin-right: 24px;
+  color: #4e5969;
+  margin-right: 8px;
   cursor: pointer;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  padding: 6px 10px;
+  border-radius: 6px;
+  transition: background 0.15s, color 0.15s;
+
+  &:hover {
+    background: #f2f3f5;
+    color: #1d2129;
+  }
 }
 
 .userBtn {
-  margin-right: 16px;
-  color: #1d2129;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px 6px 8px;
+  margin-right: 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.15s;
+  border: 1px solid transparent;
+
+  &:hover {
+    background: #f2f3f5;
+    border-color: #e5e6eb;
+  }
 }
 
-.userName {
-  padding: 8px 12px;
+.userBtnAvatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.userBtnName {
+  font-size: 13px;
+  font-weight: 500;
+  color: #1d2129;
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.userBtnArrow {
+  color: #86909c;
+  flex-shrink: 0;
+}
+
+// --- Popover content ---
+.userPopover {
+  width: 220px;
+  padding: 0;
+}
+
+.userPopHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 16px 12px;
+}
+
+.userPopAvatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.userPopInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.userPopName {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1d2129;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.userPopId {
+  font-size: 11px;
+  color: #c2c7cf;
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.userPopBody {
+  padding: 0 16px 12px;
+}
+
+.userPopMeta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 8px;
+  background: #f7f8fa;
+  border-radius: 6px;
+}
+
+.userPopMetaLabel {
+  font-size: 12px;
+  color: #86909c;
+}
+
+.userPopMetaValue {
+  font-size: 12px;
+  color: #4e5969;
+  font-weight: 500;
+}
+
+.userPopDivider {
+  height: 1px;
+  background: #eaedf1;
+  margin: 0 12px;
+}
+
+.userPopActions {
+  padding: 6px 0;
+}
+
+.userPopAction {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  cursor: pointer;
   font-size: 13px;
   color: #4e5969;
-  border-bottom: 1px solid #f0f2f5;
+  transition: background 0.15s, color 0.15s;
+
+  &:hover {
+    background: #f7f8fa;
+    color: #1d2129;
+  }
+}
+
+.userPopDanger {
+  color: #ef4444;
+
+  &:hover {
+    background: #fef2f2;
+    color: #dc2626;
+  }
 }

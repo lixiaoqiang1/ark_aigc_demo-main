@@ -1,18 +1,13 @@
-/**
- * Copyright 2025 Beijing Volcano Engine Technology Co., Ltd. All Rights Reserved.
- * SPDX-license-identifier: BSD-3-Clause
- */
-
 import React, { useRef, useEffect } from 'react';
 import { useSelector } from 'react-redux';
-import { Tag, Spin } from '@arco-design/web-react';
+import { Tag } from '@arco-design/web-react';
+import { MessageSquareText } from 'lucide-react';
 import { RootState } from '@/store';
 import Loading from '@/components/Loading/HorizonLoading';
 import { isMobile } from '@/utils/utils';
 import { useScene } from '@/lib/useCommon';
 import USER_AVATAR from '@/assets/img/userAvatar.png';
 import styles from './index.module.less';
-import AIAvatarReadying from '@/components/AIAvatarLoading';
 
 function Conversation(props: React.HTMLAttributes<HTMLDivElement> & { showSubtitle?: boolean }) {
   const { className, showSubtitle = true, ...rest } = props;
@@ -22,7 +17,7 @@ function Conversation(props: React.HTMLAttributes<HTMLDivElement> & { showSubtit
   const { isAITalking, isUserTalking, scene } = useSelector((state: RootState) => state.room);
   const hasMessages = msgHistory.length > 0;
   const containerRef = useRef<HTMLDivElement>(null);
-  const { botName, icon, isAvatarScene } = useScene();
+  const { botName, icon } = useScene();
 
   const isUserMsg = (msg: (typeof msgHistory)[0]) => {
     if (msg.role === 'user') return true;
@@ -55,32 +50,30 @@ function Conversation(props: React.HTMLAttributes<HTMLDivElement> & { showSubtit
       className={`${styles.conversation} ${className} ${isFullScreen ? styles.fullScreen : ''} ${
         isMobile() ? styles.mobileConversation : ''
       }`}
-      style={isAvatarScene && isJoined && !hasMessages ? { justifyContent: 'center' } : {}}
       {...rest}
     >
-      {!hasMessages ? (
-        <div className={styles.aiReadying}>
-          {isJoined ? (
-            isAvatarScene ? (
-              <AIAvatarReadying />
-            ) : (
-              <>
-                <Spin size={16} className={styles['aiReading-spin']} />
-                AI 准备中, 请稍侯
-              </>
-            )
-          ) : (
-            <span>选择左侧会话查看历史，或开始文本 / 语音对话</span>
-          )}
+      {!hasMessages && !isJoined ? (
+        <div style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: '80%',
+          gap: 16,
+          color: '#86909c',
+        }}>
+          <MessageSquareText size={48} strokeWidth={1.5} style={{ opacity: 0.3 }} />
+          <div style={{ fontSize: 18, fontWeight: 600, color: '#1d2129' }}>开始新的对话</div>
+          <div style={{ fontSize: 13, color: '#86909c', textAlign: 'center', lineHeight: 1.6 }}>
+            输入消息或点击语音按钮开始与 AI 对话
+          </div>
         </div>
       ) : null}
       {(showSubtitle ? msgHistory : []).map((msg, index) => {
         const { value, user, isInterrupted } = msg;
         const userSide = isUserMsg(msg);
         const robotSide = isRobotMsg(msg);
-        if (!userSide && !robotSide) {
-          return null;
-        }
+        if (!userSide && !robotSide) return null;
         return (
           <div
             key={`msg-container-${index}`}

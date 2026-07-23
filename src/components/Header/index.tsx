@@ -5,15 +5,15 @@
 
 import { useState } from 'react';
 import { Button, Divider, Form, Input, Message, Modal, Popover } from '@arco-design/web-react';
-import { IconMenu, IconUser } from '@arco-design/web-react/icon';
+import { Menu, ExternalLink, User, KeyRound, LogOut, ChevronDown, FileText } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import NetworkIndicator from '@/components/NetworkIndicator';
 import { useIsMobile } from '@/utils/utils';
 import { RootState } from '@/store';
 import { logout } from '@/store/slices/auth';
 import { resetConversationState } from '@/store/slices/conversation';
 import { AuthAPI } from '@/app/bizApi';
+import NetworkIndicator from '@/components/NetworkIndicator';
 import { useLeave } from '@/lib/useCommon';
 import Logo from '@/assets/img/Logo.svg';
 import styles from './index.module.less';
@@ -35,8 +35,9 @@ function Header(props: HeaderProps) {
   const leaveRoom = useLeave();
   const [pwdVisible, setPwdVisible] = useState(false);
   const [form] = Form.useForm();
+  const [userPopVisible, setUserPopVisible] = useState(false);
 
-  const MenuProps = [
+  const menuItems = [
     {
       name: '免责声明',
       url: Disclaimer,
@@ -75,6 +76,64 @@ function Header(props: HeaderProps) {
     await handleLogout();
   };
 
+  const userPopContent = (
+    <div className={styles.userPopover}>
+      <div className={styles.userPopHeader}>
+        <div className={styles.userPopAvatar}>
+          <User size={20} />
+        </div>
+        <div className={styles.userPopInfo}>
+          <div className={styles.userPopName}>{user?.username || '未登录'}</div>
+          <div className={styles.userPopId}>ID: {user?.id || '-'}</div>
+        </div>
+      </div>
+      <div className={styles.userPopBody}>
+        {user?.created_at && (
+          <div className={styles.userPopMeta}>
+            <span className={styles.userPopMetaLabel}>注册时间</span>
+            <span className={styles.userPopMetaValue}>
+              {new Date(user.created_at).toLocaleDateString('zh-CN')}
+            </span>
+          </div>
+        )}
+      </div>
+      <div className={styles.userPopDivider} />
+      <div className={styles.userPopActions}>
+        <div
+          className={styles.userPopAction}
+          onClick={() => {
+            setUserPopVisible(false);
+            setPwdVisible(true);
+          }}
+        >
+          <KeyRound size={15} />
+          修改密码
+        </div>
+        <div
+          className={styles.userPopAction}
+          onClick={() => {
+            setUserPopVisible(false);
+            window.open('https://www.volcengine.com/docs/6348/68916', '_blank');
+          }}
+        >
+          <FileText size={15} />
+          使用文档
+        </div>
+        <div className={styles.userPopDivider} />
+        <div
+          className={`${styles.userPopAction} ${styles.userPopDanger}`}
+          onClick={() => {
+            setUserPopVisible(false);
+            handleLogout();
+          }}
+        >
+          <LogOut size={15} />
+          退出登录
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div
       className={styles.header}
@@ -87,7 +146,7 @@ function Header(props: HeaderProps) {
           <Popover
             content={
               <div className={styles['menu-wrapper']}>
-                {MenuProps.map((menuItem) => (
+                {menuItems.map((menuItem) => (
                   <Button
                     type="text"
                     key={menuItem.name}
@@ -101,7 +160,7 @@ function Header(props: HeaderProps) {
               </div>
             }
           >
-            <IconMenu className={styles['header-setting-btn']} />
+            <Menu className={styles['header-setting-btn']} size={18} />
           </Popover>
         )}
         <img src={Logo} alt="Logo" />
@@ -119,6 +178,7 @@ function Header(props: HeaderProps) {
                 window.open('https://www.volcengine.com/product/veRTC/ConversationalAI', '_blank')
               }
             >
+              <ExternalLink size={13} style={{ marginRight: 3 }} />
               官网链接
             </div>
             <div
@@ -137,21 +197,22 @@ function Header(props: HeaderProps) {
         {user ? (
           <Popover
             position="br"
-            content={
-              <div className={styles['menu-wrapper']}>
-                <div className={styles.userName}>{user.username}</div>
-                <Button type="text" onClick={() => setPwdVisible(true)}>
-                  修改密码
-                </Button>
-                <Button type="text" status="danger" onClick={handleLogout}>
-                  退出登录
-                </Button>
-              </div>
-            }
+            trigger="hover"
+            popupVisible={userPopVisible}
+            onVisibleChange={setUserPopVisible}
+            content={userPopContent}
           >
-            <Button type="text" icon={<IconUser />} className={styles.userBtn}>
-              {user.username}
-            </Button>
+            <div className={styles.userBtn}>
+              <div className={styles.userBtnAvatar}>
+                <User size={16} />
+              </div>
+              <span className={styles.userBtnName}>{user.username}</span>
+              <ChevronDown
+                size={14}
+                className={styles.userBtnArrow}
+                style={{ transform: userPopVisible ? 'rotate(180deg)' : undefined, transition: 'transform 0.2s' }}
+              />
+            </div>
           </Popover>
         ) : null}
       </div>

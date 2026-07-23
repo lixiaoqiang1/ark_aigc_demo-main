@@ -1,8 +1,3 @@
-/**
- * Copyright 2025 Beijing Volcano Engine Technology Co., Ltd. All Rights Reserved.
- * SPDX-license-identifier: BSD-3-Clause
- */
-
 import { useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import Header from '@/components/Header';
@@ -22,25 +17,18 @@ import {
   updateScene,
   updateSceneConfig,
 } from '@/store/slices/room';
-import { setCurrentConversationId, upsertConversation } from '@/store/slices/conversation';
-import { ConversationAPI } from '@/app/bizApi';
+import { setCurrentConversationId } from '@/store/slices/conversation';
 import styles from './index.module.less';
 
 export default function () {
   const leaveRoom = useLeave();
   const dispatch = useDispatch();
-  const { refreshList, loadMessages } = useConversationManager();
+  const { refreshList } = useConversationManager();
   usePersistSubtitles();
 
   const getScenes = async () => {
-    const {
-      scenes,
-    }: {
-      scenes: {
-        rtc: RTCConfig;
-        scene: SceneConfig;
-      }[];
-    } = await Apis.Basic.getScenes();
+    const { scenes }: { scenes: { rtc: RTCConfig; scene: SceneConfig }[] } =
+      await Apis.Basic.getScenes();
     dispatch(updateScene(scenes[0].scene.id));
     dispatch(
       updateSceneConfig(
@@ -64,14 +52,11 @@ export default function () {
     (async () => {
       try {
         await getScenes();
+        // Load sidebar list but do NOT auto-select any conversation
+        // User starts with a blank canvas
         const list = await refreshList();
         if (list.length) {
-          dispatch(setCurrentConversationId(list[0].id));
-          await loadMessages(list[0].id);
-        } else {
-          const created = await ConversationAPI.create();
-          dispatch(upsertConversation(created));
-          dispatch(setCurrentConversationId(created.id));
+          dispatch(setCurrentConversationId(''));
         }
       } catch (e) {
         console.error(e);
@@ -80,10 +65,7 @@ export default function () {
 
     const isOriginalDemo = window.location.host.startsWith('localhost');
     const handler = () => {
-      if (
-        document.visibilityState === 'hidden' &&
-        !sessionStorage.getItem(ABORT_VISIBILITY_CHANGE)
-      ) {
+      if (document.visibilityState === 'hidden' && !sessionStorage.getItem(ABORT_VISIBILITY_CHANGE)) {
         leaveRoom();
       }
     };
@@ -98,9 +80,7 @@ export default function () {
       <Header />
       <div
         className={styles.main}
-        style={{
-          padding: useIsMobile() ? '' : '24px',
-        }}
+        style={{ padding: useIsMobile() ? '' : '24px' }}
       >
         {useIsMobile() ? null : <ConversationSidebar />}
         <div className={`${styles.mainArea} ${useIsMobile() ? styles.isMobile : ''}`}>

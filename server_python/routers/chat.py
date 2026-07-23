@@ -1,11 +1,12 @@
 # Copyright 2025 Beijing Volcano Engine Technology Co., Ltd. All Rights Reserved.
 # SPDX-license-identifier: BSD-3-Clause
 
-import os
+import json, os
 from typing import List, Literal, Optional
 
 import httpx
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
 from auth_utils import get_current_user
@@ -45,13 +46,9 @@ def _load_history_from_db(conversation_id: str, user_id: str) -> List[dict]:
             (conversation_id, user_id),
         )
         if not cur.fetchone():
-            raise HTTPException(status_code=404, detail='会话不存在')
+            raise HTTPException(status_code=404, detail='Conversation not found')
         cur.execute(
-            '''
-            SELECT role, content FROM messages
-            WHERE conversation_id = ?
-            ORDER BY created_at ASC
-            ''',
+            'SELECT role, content FROM messages WHERE conversation_id = ? ORDER BY created_at ASC',
             (conversation_id,),
         )
         rows = cur.fetchall()
@@ -60,23 +57,20 @@ def _load_history_from_db(conversation_id: str, user_id: str) -> List[dict]:
 
 @router.post('/chat')
 async def text_chat(body: ChatBody, user: dict = Depends(get_current_user)):
-    """文本直连方舟 LLM，无需进入 RTC 房间。"""
+    """SSE streaming text chat to Ark LLM."""
     scene = SCENES.get(body.SceneID)
     if not scene:
-        raise HTTPException(status_code=400, detail=f'场景 {body.SceneID} 不存在')
+        raise HTTPException(status_code=400, detail=f'Scene {body.SceneID} not found')
 
     voice_chat = scene.get('VoiceChat') or {}
     llm_config = ((voice_chat.get('Config') or {}).get('LLMConfig')) or {}
     endpoint_id = (llm_config.get('EndPointId') or llm_config.get('EndpointId') or '').strip()
     if not endpoint_id:
-        raise HTTPException(status_code=400, detail='场景未配置 LLMConfig.EndPointId')
+        raise HTTPException(status_code=400, detail='LLMConfig.EndPointId not configured')
 
     api_key = _resolve_ark_api_key(llm_config)
     if not api_key:
-        raise HTTPException(
-            status_code=400,
-            detail='未配置方舟 ApiKey：请在环境变量 ARK_API_KEY 或 LLMConfig.ApiKey 中填写',
-        )
+        raise HTTPException(status_code=400, detail='ARK_API_KEY not configured')
 
     system_messages = llm_config.get('SystemMessages') or []
     messages: List[dict] = []
@@ -91,7 +85,6 @@ async def text_chat(body: ChatBody, user: dict = Depends(get_current_user)):
     else:
         hist = []
 
-    # history 里可能已含本轮用户消息，避免重复追加
     if hist and hist[-1].get('role') == 'user' and hist[-1].get('content') == body.message.strip():
         messages.extend(hist)
     else:
@@ -101,41 +94,57 @@ async def text_chat(body: ChatBody, user: dict = Depends(get_current_user)):
     payload = {
         'model': endpoint_id,
         'messages': messages,
-        'stream': False,
+        'stream': True,
         'temperature': 0.7,
     }
 
-    try:
-        async with httpx.AsyncClient(timeout=90.0) as client:
-            resp = await client.post(
-                f'{ARK_BASE}/chat/completions',
-                headers={
-                    'Authorization': f'Bearer {api_key}',
-                    'Content-Type': 'application/json',
-                },
-                json=payload,
-            )
-    except httpx.HTTPError as exc:
-        raise HTTPException(status_code=502, detail=f'调用方舟失败: {exc}') from exc
-
-    if resp.status_code >= 400:
-        detail = resp.text
+    async def event_stream():
+        full_content = ''
         try:
-            detail = resp.json()
-        except Exception:
-            pass
-        raise HTTPException(status_code=502, detail=detail)
+            async with httpx.AsyncClient(timeout=90.0) as client:
+                async with client.stream(
+                    'POST',
+                    f'{ARK_BASE}/chat/completions',
+                    headers={
+                        'Authorization': f'Bearer {api_key}',
+                        'Content-Type': 'application/json',
+                    },
+                    json=payload,
+                ) as resp:
+                    if resp.status_code >= 400:
+                        detail = await resp.aread()
+                        yield f'data: {json.dumps({"error": f"Ark error {resp.status_code}", "detail": detail.decode(errors="replace")[:500]})}\n\n'
+                        return
 
-    data = resp.json()
-    try:
-        content = data['choices'][0]['message']['content']
-    except (KeyError, IndexError, TypeError) as exc:
-        raise HTTPException(status_code=502, detail='方舟返回格式异常') from exc
+                    async for line in resp.aiter_lines():
+                        if not line.startswith('data: '):
+                            continue
+                        data_str = line[6:]
+                        if data_str.strip() == '[DONE]':
+                            break
+                        try:
+                            chunk = json.loads(data_str)
+                        except json.JSONDecodeError:
+                            continue
+                        delta = (
+                            chunk.get('choices', [{}])[0]
+                            .get('delta', {})
+                            .get('content', '')
+                        )
+                        if delta:
+                            full_content += delta
+                            yield f'data: {json.dumps({"token": delta})}\n\n'
+        except httpx.HTTPError as exc:
+            yield f'data: {json.dumps({"error": f"HTTP error: {exc}"})}\n\n'
 
-    if not content:
-        raise HTTPException(status_code=502, detail='模型返回空内容')
+        yield f'data: {json.dumps({"done": True, "full": full_content, "model": endpoint_id})}\n\n'
 
-    return {
-        'reply': content,
-        'model': endpoint_id,
-    }
+    return StreamingResponse(
+        event_stream(),
+        media_type='text/event-stream',
+        headers={
+            'Cache-Control': 'no-cache',
+            'Connection': 'keep-alive',
+            'X-Accel-Buffering': 'no',
+        },
+    )

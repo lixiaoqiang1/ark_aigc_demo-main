@@ -1,23 +1,13 @@
-/**
- * Copyright 2025 Beijing Volcano Engine Technology Co., Ltd. All Rights Reserved.
- * SPDX-license-identifier: BSD-3-Clause
- */
-
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { useSelector } from 'react-redux';
 import {
   Button,
   Input,
-  List,
   Modal,
   Typography,
   Message,
 } from '@arco-design/web-react';
-import {
-  IconDelete,
-  IconEdit,
-  IconPlus,
-} from '@arco-design/web-react/icon';
+import { MessageSquarePlus, Pencil, Trash2 } from 'lucide-react';
 import { RootState } from '@/store';
 import { useConversationManager } from '@/lib/useConversationManager';
 import styles from './index.module.less';
@@ -65,51 +55,52 @@ export default function ConversationSidebar() {
         <Button
           type="primary"
           size="mini"
-          icon={<IconPlus />}
+          icon={<MessageSquarePlus size={14} />}
           onClick={() => createConversation()}
         >
           新建
         </Button>
       </div>
-      <List
-        className={styles.list}
-        bordered={false}
-        dataSource={list}
-        noDataElement={<div className={styles.empty}>暂无会话，点击新建</div>}
-        render={(item) => (
-          <List.Item
-            key={item.id}
-            className={`${styles.item} ${item.id === currentId ? styles.active : ''}`}
-            onClick={() => switchConversation(item.id)}
-            actions={[
-              <Button
-                key="edit"
-                type="text"
-                size="mini"
-                icon={<IconEdit />}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  openRename(item.id, item.title);
-                }}
-              />,
-              <Button
-                key="del"
-                type="text"
-                size="mini"
-                status="danger"
-                icon={<IconDelete />}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  deleteConversation(item.id);
-                }}
-              />,
-            ]}
-          >
-            <div className={styles.title}>{item.title || '新会话'}</div>
-            <div className={styles.time}>{formatTime(item.updated_at)}</div>
-          </List.Item>
+      <div className={styles.list}>
+        {list.length === 0 ? (
+          <div className={styles.empty}>暂无会话，点击新建</div>
+        ) : (
+          list.map((item) => (
+            <div
+              key={item.id}
+              className={`${styles.item} ${item.id === currentId ? styles.active : ''}`}
+              onClick={() => switchConversation(item.id)}
+            >
+              <div className={styles.itemRow}>
+                <div className={styles.titleWrap}>
+                  <div className={styles.title}>{item.title || '新会话'}</div>
+                  <div className={styles.time}>{formatTime(item.updated_at)}</div>
+                </div>
+                <div className={styles.actions}>
+                  <span
+                    className={styles.actionBtn}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      openRename(item.id, item.title);
+                    }}
+                  >
+                    <Pencil size={13} />
+                  </span>
+                  <span
+                    className={styles.actionBtn}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteConversation(item.id);
+                    }}
+                  >
+                    <Trash2 size={13} />
+                  </span>
+                </div>
+              </div>
+            </div>
+          ))
         )}
-      />
+      </div>
       <Modal
         title="修改标题"
         visible={Boolean(renameId)}

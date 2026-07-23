@@ -1,46 +1,124 @@
-/**
+﻿/**
  * Copyright 2025 Beijing Volcano Engine Technology Co., Ltd. All Rights Reserved.
  * SPDX-license-identifier: BSD-3-Clause
  */
 
 .sidebar {
-  width: 220px;
+  width: 260px;
   height: 100%;
-  background: #fff;
-  border-radius: 16px;
+  background: #f9fafb;
+  border-radius: 14px;
   border: 1px solid #eaedf1;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  margin-right: 12px;
+  margin-right: 16px;
   flex-shrink: 0;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
+  transition: box-shadow 0.2s;
+
+  &:hover {
+    box-shadow: 0 2px 16px rgba(0, 0, 0, 0.08);
+  }
 }
 
 .header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 12px 8px;
-  border-bottom: 1px solid #f0f2f5;
+  padding: 18px 16px 12px;
+  border-bottom: 1px solid #eaedf1;
+  flex-shrink: 0;
+
+  :global(.arco-typography) {
+    font-size: 15px;
+    font-weight: 600;
+    color: #1f2937;
+  }
+
+  :global(.arco-btn) {
+    border-radius: 8px;
+    font-weight: 500;
+    font-size: 13px;
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    border: none;
+    color: #fff;
+    padding: 4px 14px;
+    height: auto;
+    line-height: 24px;
+    box-shadow: 0 2px 6px rgba(99, 102, 241, 0.2);
+
+    &:hover {
+      opacity: 0.9;
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.28);
+    }
+  }
 }
 
 .list {
   flex: 1;
-  overflow: auto;
-  padding: 4px 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 8px 10px;
+
+  &::-webkit-scrollbar {
+    width: 5px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #c9cdd5;
+    border-radius: 3px;
+
+    &:hover {
+      background: #a8aeb9;
+    }
+  }
 }
 
 .item {
   cursor: pointer;
-  padding: 8px 12px !important;
+  padding: 11px 14px;
+  border-radius: 10px;
+  margin-bottom: 3px;
+  transition: all 0.2s;
+  background: transparent;
 
   &:hover {
-    background: #f7f8fa;
+    background: #eef0f5;
+
+    .actions {
+      opacity: 1;
+    }
   }
 }
 
 .active {
-  background: #eef3ff !important;
+  background: linear-gradient(135deg, #eef3ff 0%, #f3eeff 100%) !important;
+  box-shadow: 0 1px 4px rgba(99, 102, 241, 0.1);
+
+  .title {
+    color: #4338ca;
+    font-weight: 600;
+  }
+
+  .time {
+    color: #8b9bca;
+  }
+}
+
+.itemRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.titleWrap {
+  flex: 1;
+  min-width: 0;
 }
 
 .title {
@@ -49,18 +127,46 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 140px;
+  font-weight: 500;
+  transition: color 0.15s;
 }
 
 .time {
   font-size: 11px;
-  color: #86909c;
-  margin-top: 2px;
+  color: #c2c7cf;
+  margin-top: 3px;
+  transition: color 0.15s;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.15s;
+  flex-shrink: 0;
+}
+
+.actionBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  color: #6b7280;
+  cursor: pointer;
+  transition: all 0.15s;
+
+  &:hover {
+    color: #374151;
+    background: rgba(0, 0, 0, 0.06);
+  }
 }
 
 .empty {
-  padding: 24px 12px;
+  padding: 36px 12px;
   text-align: center;
-  color: #86909c;
-  font-size: 12px;
+  color: #c2c7cf;
+  font-size: 13px;
 }

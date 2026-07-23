@@ -381,6 +381,57 @@ export const roomSlice = createSlice({
     ) => {
       state.msgHistory.push(payload);
     },
+    setStreamingAssistantMsg: (
+      state,
+      {
+        payload,
+      }: {
+        payload: {
+          value: string;
+          definite?: boolean;
+          paragraph?: boolean;
+        };
+      }
+    ) => {
+      for (let id = state.msgHistory.length - 1; id >= 0; id -= 1) {
+        const msg = state.msgHistory[id];
+        if (msg.role === 'assistant') {
+          msg.value = payload.value;
+          if (payload.definite !== undefined) msg.definite = payload.definite;
+          if (payload.paragraph !== undefined) msg.paragraph = payload.paragraph;
+          msg.time = new Date().toString();
+          break;
+        }
+      }
+    },
+    startStreamingAssistant: (
+      state,
+      {
+        payload,
+      }: {
+        payload: {
+          user: string;
+        };
+      }
+    ) => {
+      state.msgHistory.push({
+        value: '',
+        time: new Date().toString(),
+        user: payload.user,
+        paragraph: false,
+        definite: false,
+        source: 'text',
+        role: 'assistant',
+      });
+    },
+    removeEmptyAssistantMsg: (state) => {
+      if (state.msgHistory.length) {
+        const last = state.msgHistory[state.msgHistory.length - 1];
+        if (last.role === 'assistant' && !last.value) {
+          state.msgHistory.pop();
+        }
+      }
+    },
     updateShowSubtitle: (state, { payload }) => {
       state.isShowSubtitle = payload.isShowSubtitle;
     },
@@ -412,6 +463,9 @@ export const {
   clearCurrentMsg,
   loadHistoryMsg,
   appendLocalMsg,
+  setStreamingAssistantMsg,
+  startStreamingAssistant,
+  removeEmptyAssistantMsg,
   setInterruptMsg,
   updateNetworkQuality,
   updateScene,

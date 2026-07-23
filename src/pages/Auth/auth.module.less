@@ -8,19 +8,115 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(160deg, #f5f7ff 0%, #faf3ff 100%);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   padding: 24px;
 }
 
 .card {
-  width: 400px;
+  width: 420px;
   max-width: 100%;
-  border-radius: 12px;
+  border-radius: 16px;
+  overflow: hidden;
+  border: none;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+
+  :global(.arco-card-body) {
+    padding: 0;
+  }
+}
+
+.cardInner {
+  padding: 40px 36px 36px;
+}
+
+.logoArea {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.logoIcon {
+  margin-bottom: 16px;
+  display: flex;
+  justify-content: center;
+}
+
+.title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #1d2129;
+  margin: 0 0 6px;
+}
+
+.subtitle {
+  font-size: 14px;
+  color: #86909c;
+  margin: 0;
+}
+
+.form {
+  :global(.arco-form-item-label) {
+    font-weight: 500;
+    color: #4e5969;
+    margin-bottom: 6px;
+  }
+}
+
+.input {
+  :global(.arco-input-wrapper) {
+    border-radius: 8px;
+    border-color: #e5e6eb;
+    transition: border-color 0.2s, box-shadow 0.2s;
+
+    &:hover {
+      border-color: #c9cdd4;
+    }
+
+    &:focus-within {
+      border-color: #6366f1;
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    }
+  }
+
+  :global(.arco-input) {
+    font-size: 14px;
+  }
+}
+
+.submitBtn {
+  height: 44px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 500;
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  border: none;
+  transition: opacity 0.2s, transform 0.1s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:hover {
+    opacity: 0.92;
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
 }
 
 .footer {
-  margin-top: 16px;
+  margin-top: 24px;
   text-align: center;
-  color: #737a87;
+  color: #86909c;
   font-size: 13px;
+
+  a {
+    color: #6366f1;
+    text-decoration: none;
+    font-weight: 500;
+
+    &:hover {
+      color: #8b5cf6;
+    }
+  }
 }
